@@ -1,0 +1,31 @@
+{
+  "name": "campuspe-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "country-state-city": "^3.2.1",
+    "docx": "^9.7.1",
+    "express": "latest",
+    "express-rate-limit": "latest",
+    "helmet": "latest",
+    "mammoth": "^1.12.2",
+    "multer": "latest",
+    "pdf-parse": "^2.4.5",
+    "playwright-core": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/express": "latest",
+    "@types/multer": "latest",
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

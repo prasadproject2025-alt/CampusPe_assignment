@@ -1,42 +1,18 @@
 {
-  "name": "jobcopilot",
+  "name": "campuspe-mvp",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n API,WEB -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:web": "vite",
-    "dev:api": "tsx watch server/index.ts",
-    "build": "tsc -b && vite build && tsc -p server/tsconfig.json",
-    "test": "node --import tsx --test server/**/*.test.ts",
-    "start": "node server-dist/index.js",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "country-state-city": "^3.2.1",
-    "docx": "^9.7.1",
-    "express": "latest",
-    "express-rate-limit": "latest",
-    "helmet": "latest",
-    "lucide-react": "latest",
-    "mammoth": "^1.12.2",
-    "multer": "latest",
-    "pdf-parse": "^2.4.5",
-    "playwright-core": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "typescript": "latest",
-    "vite": "latest",
-    "zod": "latest"
+    "dev": "concurrently -k -n API,WEB -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "test": "cd backend && npm run test",
+    "start": "cd backend && npm run start"
   },
   "devDependencies": {
-    "@types/express": "latest",
-    "@types/multer": "latest",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "concurrently": "latest",
-    "tsx": "latest"
+    "concurrently": "latest"
   }
 }

@@ -1,6 +1,13 @@
 node_modules/
 *.tsbuildinfo
 
+# Frontend build output
+frontend/dist/
+frontend/.vite/
+
+# Backend build output
+backend/dist/
+
 # Local personal data — never commit
 data/
 uploads/
