@@ -37,6 +37,8 @@ export class OllamaAnswerProvider implements LlmAnswerProvider {
       education: input.candidate.education,
     }
     const prompt = `You are drafting an answer to a job application form question.
+Never invent facts. Never invent employers. Never invent dates. Never invent skills. Never invent salary. Never invent legal or work authorization status. Never invent personal information. Never claim experience that is not supported by the resume or profile.
+If insufficient evidence exists, set needsUserInput to true and confidence to 0. If the question is sensitive, set needsUserInput to true.
 First decide whether the supplied candidate profile contains information that is genuinely relevant to this exact question. If it does, use only those relevant details. Never force unrelated education, experience, skills, or links into an answer.
 If no relevant profile detail exists and this is an ordinary subjective written question, answer naturally from the job and company context without making new factual claims about the candidate. Do not pause merely because the profile has no matching text.
 Produce the strongest truthful answer that improves the candidate's chances by emphasizing genuine alignment with the role.
@@ -47,7 +49,7 @@ For optional recruitment-status communication questions (for example receiving a
 Other than the recruitment-status communication preference above, if an option would assert a candidate-specific fact—such as eligibility, authorization, sponsorship, immigration, salary, availability, location commitment, consent, demographics, disability, veteran status, qualifications, or years of experience—choose it only when the candidate context explicitly supports it. Otherwise set needsUserInput to true and confidence to 0. Never select a favorable option by inventing a fact.
 When the canonical field is skill_experience_years, estimate a numeric number of years only from dated candidate work-history entries whose descriptions explicitly mention the skill, system, or domain in the question. Return only a number such as 3 or 4.5 as the answer. Do not use total career duration unless the relevant skill is supported throughout those dated roles. If the evidence cannot support a defensible estimate, set needsUserInput to true.
 Respect the field type and available options exactly. Keep written answers concise; if the question gives a word limit, obey it.
-Return only JSON with keys: answer, confidence (0 to 1), explanation, needsUserInput.
+Return only JSON with keys: answer, confidence (0 to 1), source (profile, resume, derived, or llm), requiresUserReview (boolean), explanation, needsUserInput.
 
 Question: ${input.question.text}
 Canonical field: ${input.canonicalField ?? ''}
@@ -62,7 +64,7 @@ Candidate context: ${JSON.stringify(candidate).slice(0, 12_000)}`
       const response = await fetch(`${this.endpoint}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: this.model, stream: false, format: 'json', messages: [{ role: 'user', content: prompt }], options: { temperature: 0.25, num_predict: 180 } }),
+        body: JSON.stringify({ model: this.model, stream: false, format: 'json', messages: [{ role: 'user', content: prompt }], options: { temperature: 0.1, num_predict: 180 } }),
         signal: AbortSignal.timeout(90_000),
       })
       if (!response.ok) return null

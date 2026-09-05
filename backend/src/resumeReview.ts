@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
 import * as mammoth from 'mammoth'
 import { PDFParse } from 'pdf-parse'
-import { chromium } from 'playwright-core'
+import { launchHeadlessAutomationBrowser, runWithBrowserPermit } from './automation/browserLauncher.js'
 import { canonicalJobUrl, detectAdapter } from './automation/registry.js'
 
 export type ResumeReview = {
@@ -30,9 +30,9 @@ export async function extractTargetJob(jobUrl: string): Promise<ResumeTargetJob>
   const canonicalUrl = canonicalJobUrl(jobUrl)
   const adapter = detectAdapter(canonicalUrl)
   if (!adapter) throw new Error('Use a supported Ashby, Greenhouse, Lever, Workable, Rippling, Breezy, BambooHR, or Recruitee job link.')
-  const browser = await chromium.launch({ channel: 'chrome', headless: true })
+  return runWithBrowserPermit('resume-review', async () => {
+  const { browser, context } = await launchHeadlessAutomationBrowser()
   try {
-    const context = await browser.newContext()
     const page = await context.newPage()
     await page.goto(canonicalUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 })
     await page.waitForTimeout(1_000)
@@ -42,6 +42,7 @@ export async function extractTargetJob(jobUrl: string): Promise<ResumeTargetJob>
     if (!details.jobTitle || description.length < 100) throw new Error('The job requirements could not be read from this link. Try the public job-posting URL instead of an application-step URL.')
     return { url: canonicalUrl, board: adapter.id, title: details.jobTitle, company: details.company || new URL(canonicalUrl).hostname, location: details.location || '', description }
   } finally { await browser.close() }
+  })
 }
 
 export async function extractResumeText(path: string) {

@@ -26,13 +26,14 @@ export class WorkableJobPage {
   }
 
   async readDetails(originalUrl: string): Promise<JobDetails> {
-    const details = await this.page.evaluate(() => {
-      const title = document.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() || document.title.replace(/\s+-\s+Application.*$/i, '')
-      const body = document.body.innerText
-      const employmentType = body.match(/\b(?:full[ -]?time|part[ -]?time|contract|temporary|internship)\b/i)?.[0]
-      const workplaceType = body.match(/\b(?:remote|hybrid|on[ -]?site)\b/i)?.[0]
-      return { title, employmentType, workplaceType }
-    })
+    const details = await this.page.evaluate(`(() => {
+      var titleNode = document.querySelector('h1');
+      var title = titleNode && titleNode.textContent ? titleNode.textContent.replace(/\\s+/g, ' ').trim() : document.title.replace(/\\s+-\\s+Application.*$/i, '');
+      var body = document.body.innerText;
+      var employment = body.match(/\\b(?:full[ -]?time|part[ -]?time|contract|temporary|internship)\\b/i);
+      var workplace = body.match(/\\b(?:remote|hybrid|on[ -]?site)\\b/i);
+      return { title: title, employmentType: employment && employment[0], workplaceType: workplace && workplace[0] };
+    })()`) as { title: string; employmentType?: string; workplaceType?: string }
     const url = new URL(this.page.url()); const parts = url.pathname.split('/').filter(Boolean)
     return {
       postingId: parts[2] || null,

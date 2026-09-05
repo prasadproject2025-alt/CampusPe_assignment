@@ -14,7 +14,7 @@ test('detects all supported job links', () => {
   assert.equal(detectAdapter('https://example.breezy.hr/p/0cd2475842bb-software-engineer-i')?.id, 'breezy')
   assert.equal(detectAdapter('https://jobs.lever.co/jumpcloud/4ebbdea9-39c2-465d-bbdf-bf379a8e4a06/apply')?.id, 'lever')
   assert.equal(detectAdapter('https://jobs.eu.lever.co/example/4ebbdea9-39c2-465d-bbdf-bf379a8e4a06')?.id, 'lever')
-  assert.equal(detectAdapter('https://apply.workable.com/domain-tools/j/40A8A850B2/apply/')?.id, 'workable')
+  assert.equal(detectAdapter('https://apply.workable.com/huggingface/j/002470F128/apply/')?.id, 'workable')
   assert.equal(detectAdapter('https://apply.workable.com/domain-tools/j/40A8A850B2')?.id, 'workable')
   assert.equal(detectAdapter('https://aras.bamboohr.com/careers/382')?.id, 'bamboohr')
   assert.equal(detectAdapter('https://www.bamboohr.com/careers/application?gh_jid=6115974004')?.id, 'greenhouse')

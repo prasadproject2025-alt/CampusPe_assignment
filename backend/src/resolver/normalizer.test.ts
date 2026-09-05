@@ -49,6 +49,11 @@ test('classifies Ashby profile defaults', () => {
   assert.equal(classifyQuestion(normalizeQuestion('Will you require sponsorship for employment visa status (e.g. H1B, OPT)?')), 'us_visa_type')
 })
 
+test('classifies Greenhouse Location (City) as location', () => {
+  assert.equal(classifyQuestion(normalizeQuestion('Location (City)')), 'location')
+  assert.equal(classifyQuestion(normalizeQuestion('Location')), 'location')
+})
+
 test('classifies split Greenhouse name fields', () => {
   assert.equal(classifyQuestion(normalizeQuestion('First Name')), 'first_name')
   assert.equal(classifyQuestion(normalizeQuestion('Last Name')), 'last_name')
@@ -69,6 +74,8 @@ test('classifies Greenhouse discipline as field of study', () => {
 
 test('classifies Greenhouse website and experience range fields', () => {
   assert.equal(classifyQuestion(normalizeQuestion('Website')), 'portfolio_url')
+  assert.equal(classifyQuestion(normalizeQuestion('Portfolio Link')), 'portfolio_url')
+  assert.equal(classifyQuestion(normalizeQuestion('Portfolio Password')), null)
   assert.equal(classifyQuestion(normalizeQuestion('How many years of professional backend software engineering experience do you have?')), 'total_experience_years')
 })
 

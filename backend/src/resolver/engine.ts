@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../database.js'
 import { decryptJson, encryptJson } from '../security.js'
+import { classifyAnswerMode, sensitiveUserMessage } from '../automation/answers/answerPolicy.js'
 import { classifyQuestion, normalizeQuestion, questionSimilarity } from './normalizer.js'
 import { approvedDeclarationAnswer, manualPolicyReason, nonDisclosureOption, nonInferableFields, sensitiveFields } from './policy.js'
 import { OllamaAnswerProvider } from './ollama.js'
@@ -126,7 +127,15 @@ export class AnswerResolver {
       return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: matchedMemoryOption, source: 'L2_MEMORY', confidence: Number(memory.score.toFixed(2)), requiresReview: sensitiveFields.has(canonical ?? ''), canonicalField: canonical, explanation: 'Reused a previously approved answer to a semantically similar question.', memoryId: memory.row.id })
     }
     if (canonical && nonInferableFields.has(canonical) && !options.testMode) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'This factual or preference answer must come from your profile or a previously approved answer.', canonicalField: canonical, pauseCode: 'RESTRICTED_QUESTION' })
+    const answerMode = classifyAnswerMode(question.text)
+    if (answerMode === 'USER_REQUIRED' && !options.testMode) {
+      return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: sensitiveUserMessage(question.text) || 'Please provide this information.', canonicalField: canonical, pauseCode: 'RESTRICTED_QUESTION' })
+    }
     if ((question.fieldType === 'select' || question.fieldType === 'boolean') && !question.options?.length) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'This is a choice control, but its visible options could not be read reliably. JobCopilot will not type a generated sentence into it.', canonicalField: canonical, pauseCode: 'MISSING_PROFILE_VALUE' })
+    const allowLlm = answerMode === 'LLM_GENERATED' || canonical === 'skill_experience_years' || question.fieldType === 'textarea'
+    if (!allowLlm && !options.testMode) {
+      return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'No matching profile or resume fact was found. JobCopilot did not ask the model to invent an answer.', canonicalField: canonical, pauseCode: 'MISSING_PROFILE_VALUE' })
+    }
     if (!this.llm && options.testMode) return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: this.testAnswer(question), source: 'L3_LLM', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used a testing-only fallback because no model is configured. This run cannot be submitted.' })
     if (!this.llm) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'No reliable profile or approved-memory answer was found, and no LLM provider is configured.', canonicalField: canonical, pauseCode: 'LLM_NOT_CONFIGURED' })
     const draft = await this.llm.resolve({ question, normalizedQuestion: normalized, canonicalField: canonical, candidate, job })

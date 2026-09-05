@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiRequest, type Education, type RecommendedJob, type StoredProfile, type WorkExperience } from './api'
+import { apiRequest, ApiError, type Education, type RecommendedJob, type StoredProfile, type WorkExperience } from './api'
+import { LiveApplication } from './components/application/LiveApplication'
+import type { AutomationRun } from './components/application/types'
 import { ProfilePage } from './ProfilePage'
 import {
   ArrowRight,
@@ -22,7 +24,6 @@ import {
   Link2,
   Menu,
   MapPin,
-  Pause,
   Plus,
   Search,
   Send,
@@ -42,22 +43,6 @@ type DashboardTab = 'discover' | 'resume' | 'auto-apply' | 'applications'
 type ResumeReview = { score: number; summary: string; strengths: string[]; tips: Array<{ priority: 'high' | 'medium' | 'low'; title: string; detail: string }>; matchedKeywords?: string[]; missingKeywords?: string[] }
 type ResumeTargetJob = { url: string; board: string; title: string; company: string; location: string; description: string }
 type ResumeOptimization = { id: string; mode: 'review' | 'automatic'; status: 'DRAFT' | 'APPROVED'; job: { url: string; title: string; company: string; location: string }; proposal: { originalScore: number; optimizedScore: number; headline: string; changes: Array<{ section: string; before: string; after: string; reason: string }>; tailoredResumeText: string; safetyNote: string } }
-type AutomationRun = {
-  id: string
-  jobUrl: string
-  jobBoard: string
-  status: 'QUEUED' | 'OPENING_JOB' | 'EXTRACTING_JOB' | 'FILLING_APPLICATION' | 'PAUSED_BY_USER' | 'PAUSED_NEEDS_INPUT' | 'PAUSED_LOGIN' | 'PAUSED_CAPTCHA' | 'READY_FOR_REVIEW' | 'SUBMITTING' | 'SUBMITTED' | 'FAILED'
-  currentStep: string
-  autoSubmit?: boolean
-  testMode?: boolean
-  browserActive?: boolean
-  job?: { company?: string; jobTitle?: string; location?: string } | null
-  pause?: { reason?: string; instruction?: string; question?: { text?: string } } | null
-  error?: string | null
-  events?: Array<{ message: string; createdAt: string }>
-  createdAt: string
-  updatedAt: string
-}
 type JobsResponse = { data: { jobs: RecommendedJob[]; sources: Array<{ source: RecommendedJob['source']; jobs: number }>; pagination: { offset: number; limit: number; total: number; hasMore: boolean } } }
 
 const roles = [
@@ -430,7 +415,8 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
   }
 
   useEffect(() => {
-    if (!automationRun || ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW', 'SUBMITTED', 'FAILED'].includes(automationRun.status)) return
+    const assistedActive = Boolean(automationRun?.assistedSession && !['SUBMITTED', 'FAILED', 'EXPIRED', 'CANCELLED'].includes(automationRun.assistedSession.status))
+    if (!automationRun || (!assistedActive && ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW', 'SUBMITTED', 'FAILED'].includes(automationRun.status))) return
     const timer = window.setInterval(async () => {
       try {
         const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}`)
@@ -438,7 +424,7 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
       } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not read the automation status.') }
     }, 1000)
     return () => window.clearInterval(timer)
-  }, [automationRun?.id, automationRun?.status])
+  }, [automationRun?.id, automationRun?.status, automationRun?.assistedSession?.status])
 
   const startAutomation = async (url = jobUrl) => {
     const normalizedUrl = url.trim()
@@ -446,7 +432,7 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
     if (!testMode && autoSubmit && !window.confirm('Auto-submit will send the completed application to the employer without a final review step. Continue?')) return
     setAutomationError(''); setAutomationLoading(true)
     try {
-      const result = await apiRequest<{ data: { run: AutomationRun } }>('/api/automation/runs', { method: 'POST', body: JSON.stringify({ jobUrl: normalizedUrl, autoSubmit: testMode ? false : autoSubmit, testMode }) })
+      const result = await apiRequest<{ data: { run: AutomationRun } }>('/api/applications/inspect', { method: 'POST', body: JSON.stringify({ jobUrl: normalizedUrl, autoSubmit: testMode ? false : autoSubmit, testMode }) })
       setAutomationRun(result.data.run)
     } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not start the application.') }
     finally { setAutomationLoading(false) }
@@ -476,9 +462,37 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
     if (!automationRun || !window.confirm('Submit this application to the employer? This cannot be undone.')) return
     setAutomationError(''); setAutomationLoading(true)
     try {
-      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}/submit`, { method: 'POST' })
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/applications/${automationRun.id}/submit`, { method: 'POST' })
       setAutomationRun(result.data.run)
     } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not submit the application.') }
+    finally { setAutomationLoading(false) }
+  }
+
+  const updateAutomationAnswers = async (fields: Array<{ id: string; value: string }>) => {
+    if (!automationRun || !fields.length) return
+    try {
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/applications/${automationRun.id}/answers`, { method: 'PATCH', body: JSON.stringify({ fields }) })
+      setAutomationRun(result.data.run)
+    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not save the form answers.') }
+  }
+
+  const startAssistedBrowser = async () => {
+    if (!automationRun || automationLoading) return
+    setAutomationError(''); setAutomationLoading(true)
+    try {
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}/assisted`, { method: 'POST' })
+      setAutomationRun(result.data.run)
+    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not start the assisted browser.') }
+    finally { setAutomationLoading(false) }
+  }
+
+  const cancelAssistedBrowser = async () => {
+    if (!automationRun) return
+    setAutomationError(''); setAutomationLoading(true)
+    try {
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}/assisted/cancel`, { method: 'POST' })
+      setAutomationRun(result.data.run)
+    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not cancel the assisted session.') }
     finally { setAutomationLoading(false) }
   }
 
@@ -535,7 +549,7 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
           <button className="profile-avatar dashboard-avatar" onClick={onProfile}>{initials}</button>
         </header>
 
-        <div className="dashboard-content">
+        <div className={`dashboard-content ${tab === 'auto-apply' ? 'auto-apply-wide' : ''}`}>
           {tab === 'discover' && (
             <>
               <section className="dashboard-welcome"><div><p className="eyebrow">{todayLabel}</p><h1>Good morning, {profile.name.split(' ')[0]}.</h1><p>Here are roles that look promising for you.</p></div><button className="button primary" onClick={() => setTab('auto-apply')}><Link2 /> Apply from a job link</button></section>
@@ -579,14 +593,13 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
 
           {tab === 'auto-apply' && (
             <section className="auto-apply-page">
-              <div className="dashboard-page-title"><p className="eyebrow">Guided automation</p><h1>Apply from a job link</h1><p>Paste a supported job URL. JobCopilot will read the role, prepare your answers, and pause for your review.</p></div>
+              <div className="dashboard-page-title"><p className="eyebrow">Guided automation</p><h1>Apply from a job link</h1><p>JobCopilot opens the application inside this page. Greenhouse uses a native form. Ashby uses a native form backed by a windowless browser. Other boards use a headless preview. Google Chrome never opens.</p></div>
               <label className="consent-row testing-mode-toggle"><input type="checkbox" checked={testMode} onChange={(event) => { setTestMode(event.target.checked); if (event.target.checked) setAutoSubmit(false) }} /><span><strong>Testing mode</strong><small>Allows test answers so you can watch the complete filling flow. Submission is always disabled.</small></span></label>
               <div className="auto-apply-grid">
-                <div className="paste-link-card"><span className="large-feature-icon"><Link2 /></span><h2>Paste the job posting URL</h2><p>Automation starts immediately when you paste a valid link. A visible Chrome window will open.</p><div className="submission-mode" role="radiogroup" aria-label="Submission mode"><button type="button" role="radio" aria-checked={!autoSubmit} className={!autoSubmit ? 'active' : ''} onClick={() => setAutoSubmit(false)}><ShieldCheck /><span><b>Submit with approval</b><small>Review the completed form before sending.</small></span></button><button type="button" role="radio" aria-checked={autoSubmit} className={autoSubmit ? 'active' : ''} onClick={() => setAutoSubmit(true)}><Send /><span><b>Auto-submit</b><small>Send automatically when filling is complete.</small></span></button></div><label className="url-input"><Link2 /><input type="url" value={jobUrl} onChange={(event) => setJobUrl(event.target.value)} onPaste={(event) => { const pastedUrl = event.clipboardData.getData('text').trim(); if (!pastedUrl) return; event.preventDefault(); setJobUrl(pastedUrl); void startAutomation(pastedUrl) }} placeholder="https://jobs.lever.co/company/job-id/apply" /></label><button className="button primary large full" disabled={!jobUrl || automationLoading} onClick={() => void startAutomation()}>{automationLoading ? 'Starting…' : 'Start application'} <ArrowRight /></button><div className="supported-sites"><span>Available now</span>{supportedJobBoards.map((board) => <b key={board}>{board === 'bamboohr' ? 'BambooHR' : board[0].toUpperCase() + board.slice(1)}</b>)}</div>
+                <div className="paste-link-card"><span className="large-feature-icon"><Link2 /></span><h2>Paste the job posting URL</h2><p>Detect the ATS, render the application in the center panel, and review AI suggestions on the right. No new tab and no visible Chrome.</p><div className="submission-mode" role="radiogroup" aria-label="Submission mode"><button type="button" role="radio" aria-checked={!autoSubmit} className={!autoSubmit ? 'active' : ''} onClick={() => setAutoSubmit(false)}><ShieldCheck /><span><b>Submit with approval</b><small>Review the completed form before sending.</small></span></button><button type="button" role="radio" aria-checked={autoSubmit} className={autoSubmit ? 'active' : ''} onClick={() => setAutoSubmit(true)}><Send /><span><b>Auto-submit</b><small>Send automatically when filling is complete.</small></span></button></div><label className="url-input"><Link2 /><input type="url" value={jobUrl} onChange={(event) => setJobUrl(event.target.value)} onPaste={(event) => { const pastedUrl = event.clipboardData.getData('text').trim(); if (!pastedUrl) return; event.preventDefault(); setJobUrl(pastedUrl); void startAutomation(pastedUrl) }} placeholder="https://jobs.lever.co/company/job-id/apply" /></label><button className="button primary large full" disabled={!jobUrl || automationLoading} onClick={() => void startAutomation()}>{automationLoading ? 'Starting…' : 'Start application'} <ArrowRight /></button><div className="supported-sites"><span>Available now</span>{supportedJobBoards.map((board) => <b key={board}>{board === 'bamboohr' ? 'BambooHR' : board[0].toUpperCase() + board.slice(1)}</b>)}</div>
                   {automationError && <p className="automation-error" role="alert">{automationError}</p>}
-                  {automationRun && <div className={`automation-run ${automationRun.status.toLowerCase()}`} role="status"><div className="automation-run-heading"><span><b>{automationRun.job?.jobTitle || 'Job application'}</b><small>{automationRun.job?.company || automationRun.currentStep.replaceAll('_', ' ')}</small></span><div className="automation-run-heading-actions"><em>{automationRun.status.replaceAll('_', ' ')}</em>{['QUEUED', 'OPENING_JOB', 'EXTRACTING_JOB', 'FILLING_APPLICATION'].includes(automationRun.status) && <button className="automation-pause-button" type="button" disabled={automationLoading || !automationRun.browserActive} onClick={pauseAutomation}><Pause /> Pause</button>}</div></div>{automationRun.pause && <div className="automation-pause"><strong>{automationRun.pause.question?.text || (automationRun.status === 'PAUSED_BY_USER' ? 'Automation paused' : 'Your action is needed')}</strong><p>{automationRun.pause.reason}</p><small>{automationRun.pause.instruction}</small><button className="button primary" disabled={automationLoading || !automationRun.browserActive} onClick={continueAutomation}>Continue automation <ArrowRight /></button></div>}{automationRun.status === 'READY_FOR_REVIEW' && <div className="automation-ready"><ShieldCheck /><div><strong>Ready for your final review</strong><p>Review every answer in Chrome, then submit when ready.</p>{automationRun.error && <p className="automation-error">{automationRun.error}</p>}<button className="button primary automation-submit-button" disabled={automationLoading || !automationRun.browserActive} onClick={submitAutomation}>{automationLoading ? 'Submitting…' : 'Submit application'} <Send /></button></div></div>}{automationRun.status === 'SUBMITTING' && <div className="automation-ready"><ShieldCheck /><div><strong>Submitting application…</strong><p>Please keep the automation browser open.</p></div></div>}{automationRun.status === 'SUBMITTED' && <div className="automation-ready automation-submitted"><ShieldCheck /><div><strong>Application submitted</strong><p>The job board confirmed your application was received.</p></div></div>}{automationRun.status === 'FAILED' && <p className="automation-error">{automationRun.error}</p>}{automationRun.events?.length ? <ul className="automation-event-list">{automationRun.events.slice(-4).reverse().map((item, index) => <li key={`${item.createdAt}-${index}`}>{item.message}</li>)}</ul> : null}</div>}
                 </div>
-                <aside className="automation-steps"><h3>What happens next</h3><ol><li className="active"><span>1</span><div><b>Read the job</b><small>Extract role details and application questions.</small></div></li><li><span>2</span><div><b>Prepare answers</b><small>Use your profile and default resume.</small></div></li><li><span>3</span><div><b>{autoSubmit ? 'Automatic checks' : 'You review'}</b><small>{autoSubmit ? 'Validate required fields and visible choices.' : 'Confirm every answer before continuing.'}</small></div></li><li><span>4</span><div><b>{autoSubmit ? 'Auto-submit' : 'Submit with approval'}</b><small>{autoSubmit ? 'Send after the form is completely prepared.' : 'The final action stays with you.'}</small></div></li></ol><div className="local-safety"><ShieldCheck /><span><b>Runs on your device</b><small>Your browser session and files remain local.</small></span></div></aside>
+                <LiveApplication run={automationRun} loading={automationLoading} onContinue={() => void continueAutomation()} onPause={() => void pauseAutomation()} onSubmit={() => void submitAutomation()} onUpdateAnswers={(fields) => void updateAutomationAnswers(fields)} onAssisted={() => void startAssistedBrowser()} onCancelAssisted={() => void cancelAssistedBrowser()} />
               </div>
             </section>
           )}
@@ -623,7 +636,9 @@ function App() {
   useEffect(() => {
     apiRequest<{ data: { user: ProfileSeed } }>('/api/auth/me')
       .then((result) => { setProfile(result.data.user); setPage('dashboard') })
-      .catch(() => undefined)
+      .catch((error) => {
+        if (error instanceof ApiError && error.code === 'AUTH_REQUIRED') return
+      })
   }, [])
 
   if (page === 'profile') return <ProfilePage onHome={() => setPage('landing')} onComplete={() => setPage('dashboard')} profile={profile} />

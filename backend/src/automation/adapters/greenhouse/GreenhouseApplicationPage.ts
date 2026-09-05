@@ -1,7 +1,9 @@
 import type { Locator, Page } from 'playwright-core'
 import { Country } from 'country-state-city'
-import type { AnswerValue, FieldType } from '../../../resolver/types.js'
+import type { AnswerValue } from '../../../resolver/types.js'
 import type { AdapterQuestion, Blocker, EducationRecord, ResumeUpload } from '../../types.js'
+import { extractQuestionsFromPage } from '../../application/extraction/domExtractor.js'
+import { fillLiveAnswer, resolveLiveControl } from '../../application/extraction/liveResolver.js'
 import { greenhouseSelectors } from './selectors.js'
 
 export function isGreenhouseSchoolSearch(text: string) {
@@ -17,44 +19,19 @@ export class GreenhouseApplicationPage {
   }
 
   async readQuestions(): Promise<AdapterQuestion[]> {
-    return this.page.locator(`${greenhouseSelectors.form} input[id], ${greenhouseSelectors.form} textarea[id], ${greenhouseSelectors.form} select[id]`).evaluateAll((controls) => {
-      const questions: AdapterQuestion[] = []; const seen = new Set<string>()
-      for (const control of controls) {
-        const input = control as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-        if (!input.id || seen.has(input.id) || input.type === 'hidden' || input.name === 'g-recaptcha-response' || input.id.startsWith('iti-')) continue
-        seen.add(input.id)
-        const explicit = document.querySelector(`label[for="${CSS.escape(input.id)}"]`)
-        const labelledBy = input.getAttribute('aria-labelledby')?.split(/\s+/).map((id) => document.getElementById(id)?.textContent).filter(Boolean).join(' ')
-        const group = input.closest('[class*="field"], fieldset')
-        const groupLabel = group?.querySelector('label, legend')?.textContent
-        let text = (explicit?.textContent || labelledBy || input.getAttribute('aria-label') || groupLabel || input.id).replace(/\s+/g, ' ').replace(/\s*\*\s*$/, '').trim()
-        if (input.id === 'resume') text = 'Resume/CV'
-        if (input.id === 'cover_letter') text = 'Cover Letter'
-        if (input.id === 'country') text = 'Phone country code'
-        const role = input.getAttribute('role')
-        const inputType = input.type === 'file' ? 'file' : role === 'combobox' || input instanceof HTMLSelectElement ? 'select' : input instanceof HTMLTextAreaElement ? 'textarea' : input.type || 'text'
-        const fieldType: FieldType = inputType === 'textarea' ? 'textarea' : inputType === 'select' ? 'select' : inputType === 'number' ? 'number' : 'text'
-        const requiredText = group?.textContent?.includes('*') || explicit?.textContent?.includes('*') || false
-        const required = input.getAttribute('aria-required') === 'true' || input.required || requiredText || input.id === 'resume'
-        const answered = input instanceof HTMLInputElement && input.type === 'file' ? Boolean(input.files?.length) : Boolean(input.value.trim())
-        const id = input.id === 'resume' ? '_systemfield_resume' : input.id
-        const options = inputType === 'select' && /^(?:are|do|will|would|can|have|if)\b/i.test(text) ? ['Yes', 'No'] : undefined
-        questions.push({ id, text, fieldType, options, required, locator: { kind: 'field', value: input.id }, answered, inputType })
-      }
-      return questions
-    })
+    return extractQuestionsFromPage(this.page)
   }
 
   async focus(question: AdapterQuestion) {
-    const input = this.inputFor(question)
+    const input = await resolveLiveControl(this.page, question)
     await input.scrollIntoViewIfNeeded(); await this.pause(600, 1_050)
   }
 
   async extractOptions(question: AdapterQuestion) {
     if (isGreenhouseSchoolSearch(question.text)) return []
-    const input = this.inputFor(question)
-    const tag = await input.evaluate((element) => element.tagName.toLowerCase())
-    if (tag === 'select') return input.locator('option:not([disabled])').evaluateAll((options) => options.map((option) => option.textContent?.trim() || '').filter(Boolean))
+    const input = await resolveLiveControl(this.page, question)
+    const tag = await input.evaluate('node => node && node.tagName ? node.tagName.toLowerCase() : ""')
+    if (tag === 'select') return (await input.locator('option:not([disabled])').evaluateAll('options => options.map(option => (option.textContent || "").trim()).filter(Boolean)')) as string[]
     await input.scrollIntoViewIfNeeded(); await input.click(); await this.pause(400, 700)
     const options: string[] = []
     const visible = this.page.getByRole('option')
@@ -69,74 +46,43 @@ export class GreenhouseApplicationPage {
   }
 
   async fill(question: AdapterQuestion, answer: AnswerValue) {
-    const input = this.inputFor(question)
-    const desiredAnswer = question.locator.value === 'country' ? Country.getCountryByCode(String(answer).toUpperCase())?.name || String(answer) : String(answer)
-    const tag = await input.evaluate((element) => element.tagName.toLowerCase())
-    if (tag === 'select') {
-      await input.selectOption({ label: desiredAnswer }).catch(() => input.selectOption(desiredAnswer))
-    } else if (question.fieldType === 'select') {
+    if (question.locator.value === 'country' || /phone country/i.test(question.text)) {
+      const desiredAnswer = Country.getCountryByCode(String(answer).toUpperCase())?.name || String(answer)
+      await fillLiveAnswer(this.page, { ...question, text: question.text }, desiredAnswer)
+      return
+    }
+    if (isGreenhouseSchoolSearch(question.text) || /^degree$/i.test(question.text.trim()) || /\b(?:discipline|field of study|major)\b/i.test(question.text) || /\bhow many years\b|\byears? of .*experience\b/i.test(question.text)) {
+      const input = await resolveLiveControl(this.page, question)
+      const desiredAnswer = String(answer)
       await input.hover(); await this.pause(350, 650); await input.click(); await this.pause(450, 800)
       const schoolField = isGreenhouseSchoolSearch(question.text)
-      const degreeField = /^degree$/i.test(question.text.trim())
       const disciplineField = /\b(?:discipline|field of study|major)\b/i.test(question.text)
       const experienceRangeField = /\bhow many years\b|\byears? of .*experience\b/i.test(question.text)
-      const staticSelect = schoolField || degreeField || disciplineField || experienceRangeField
-      if (!staticSelect) {
-        await input.fill(desiredAnswer)
-        await this.pause(500, 850)
-      }
+      if (!schoolField && !/^degree$/i.test(question.text.trim()) && !disciplineField && !experienceRangeField) await input.fill(desiredAnswer)
       let option = schoolField ? await this.schoolOption(desiredAnswer) : await this.dropdownOption(desiredAnswer, disciplineField, experienceRangeField)
-      if (disciplineField && !option) {
-        const words = desiredAnswer.trim().split(/\s+/)
-        for (let length = words.length - 1; length >= 2 && !option; length -= 1) {
-          await input.fill(words.slice(0, length).join(' '))
-          await this.pause(400, 700)
-          option = await this.dropdownOption(desiredAnswer, true)
-        }
-      }
       if (schoolField && !option) {
         await input.fill('Other')
         await this.pause(450, 750)
         option = await this.schoolOption('Other')
       }
-      if (schoolField && !option) {
-        const visibleOther = this.page.getByText('Other', { exact: true }).last()
-        if (await visibleOther.isVisible().catch(() => false)) option = visibleOther
-      }
-      if (schoolField && !option) {
-        await input.press('End').catch(() => undefined)
-        await input.press('Enter').catch(() => undefined)
-        await this.pause(500, 850)
-        const selected = this.normalize(await input.inputValue())
-        if (selected === 'other') return
-      }
       if (!option) throw new Error(schoolField ? `Greenhouse did not offer “${desiredAnswer}” or an “Other” school option.` : `No matching Greenhouse option for “${desiredAnswer}”.`)
-      await option.hover(); await this.pause(350, 650); await option.click()
-      if (schoolField) {
-        await this.pause(350, 650)
-        await input.press('Escape').catch(() => undefined)
-        await this.page.keyboard.press('Escape').catch(() => undefined)
-        await input.blur().catch(() => undefined)
-        await this.pause(450, 800)
-      }
-    } else {
-      await input.hover(); await this.pause(350, 650); await input.click(); await input.fill('')
-      await input.pressSequentially(desiredAnswer, { delay: this.random(65, 110), timeout: 90_000 })
+      await option.click()
+      return
     }
-    await this.pause(600, 1_050)
+    await fillLiveAnswer(this.page, question, answer)
   }
 
   async fillEducation(_education: EducationRecord[]) { throw new Error('Greenhouse education fields require per-form handling.') }
   async uploadResume(resume: ResumeUpload) { await this.page.locator(greenhouseSelectors.resume).setInputFiles(resume) }
   async uploadFile(question: AdapterQuestion, file: ResumeUpload) {
-    const input = this.inputFor(question)
+    const input = this.page.locator(question.text.match(/cover/i) ? greenhouseSelectors.coverLetter : greenhouseSelectors.resume)
     if (await input.getAttribute('type') !== 'file') throw new Error(`Could not locate the Greenhouse upload control for “${question.text}”.`)
     await input.setInputFiles(file)
   }
 
   async detectBlocker(): Promise<Blocker | null> {
     const challenge = this.page.locator(greenhouseSelectors.recaptchaChallenge).first()
-    if (await challenge.count() && await challenge.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the visible browser, then continue.' }
+    if (await challenge.count() && await challenge.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
     return null
   }
 
@@ -146,15 +92,8 @@ export class GreenhouseApplicationPage {
     const button = this.page.locator(greenhouseSelectors.submit)
     if (!await button.isVisible()) throw new Error('The Greenhouse submit button is not available.')
     await button.scrollIntoViewIfNeeded(); await this.pause(650, 1_100); await button.hover(); await this.pause(450, 800); await button.click()
-    const confirmation = this.page.getByText(/thank you.*(?:applying|application)|application (?:has been|was) submitted|application received/i).first()
-    await Promise.race([confirmation.waitFor({ state: 'visible', timeout: 20_000 }), button.waitFor({ state: 'hidden', timeout: 20_000 })]).catch(() => undefined)
-    const blocker = await this.detectBlocker()
-    if (blocker) throw new Error(blocker.message)
-    if (await button.isVisible().catch(() => false)) throw new Error('Greenhouse did not confirm submission. Review the highlighted fields in the browser.')
   }
 
-  private inputFor(question: AdapterQuestion) { return this.page.locator(`#${this.escapeId(question.locator.value)}`).first() }
-  private escapeId(value: string) { return value.replace(/([^a-zA-Z0-9_-])/g, '\\$1') }
   private async dropdownOption(answer: string, allowCandidateSubset = false, allowRangeMatch = false): Promise<Locator | null> {
     const desired = this.normalize(answer); const options = this.page.getByRole('option')
     let partial: Locator | null = null

@@ -15,13 +15,21 @@ export type RecommendedJob = {
   salary: string | null; department: string | null; skills: string[]; publishedAt: string | null; jobUrl: string; applyUrl: string
 }
 
-type ApiError = { error?: { message?: string } }
+type ApiErrorBody = { error?: { message?: string; code?: string } }
+
+export class ApiError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, { ...options, headers: options.body instanceof FormData ? options.headers : { 'Content-Type': 'application/json', ...options.headers } })
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({})) as ApiError
-    throw new Error(payload.error?.message || `Request failed (${response.status})`)
+    const payload = await response.json().catch(() => ({})) as ApiErrorBody
+    const code = payload.error?.code || (response.status === 401 ? 'AUTH_REQUIRED' : `HTTP_${response.status}`)
+    throw new ApiError(response.status, code, payload.error?.message || `Request failed (${response.status})`)
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>

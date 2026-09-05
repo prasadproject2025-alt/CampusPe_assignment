@@ -12,6 +12,8 @@ import { db } from './database.js'
 import { decryptJson, encryptJson, hashPassword, verifyPassword } from './security.js'
 import { answerResolver } from './resolver/engine.js'
 import { automationManager } from './automation/manager.js'
+import { emptyJpeg, getRunPreview } from './automation/preview.js'
+import { touchAssistedSession } from './automation/application/assistedSession.js'
 import { supportedBoards } from './automation/registry.js'
 import { City, Country, State } from 'country-state-city'
 import { getRecommendedJobs } from './jobs.js'
@@ -23,6 +25,8 @@ app.disable('x-powered-by')
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }))
 app.use(express.json({ limit: '1mb' }))
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 50, standardHeaders: 'draft-8', legacyHeaders: false }))
+app.use('/api/applications', rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: 'draft-8', legacyHeaders: false }))
+app.use('/api/automation/runs', rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: 'draft-8', legacyHeaders: false }))
 
 const credentialsSchema = z.object({ email: z.string().trim().email().max(255), password: z.string().min(8).max(128) })
 const signupSchema = credentialsSchema.extend({ name: z.string().trim().min(1).max(100) })
@@ -38,6 +42,16 @@ const jobContextSchema = z.object({ company: z.string().max(200).optional(), job
 const resolveSchema = z.object({ question: formQuestionSchema, job: jobContextSchema.optional() })
 const rememberSchema = z.object({ question: formQuestionSchema, answer: z.union([z.string().max(10000), z.number(), z.boolean()]), scope: z.enum(['global', 'company']).default('global'), company: z.string().max(200).optional() }).superRefine((value, context) => { if (value.scope === 'company' && !value.company) context.addIssue({ code: 'custom', path: ['company'], message: 'Company is required for company-scoped answers.' }) })
 const automationRunSchema = z.object({ jobUrl: z.string().trim().url().max(2000), autoSubmit: z.boolean().default(false), testMode: z.boolean().default(false) })
+const automationAnswersSchema = z.object({
+  fields: z.array(z.object({ id: z.string().min(1).max(200), value: z.string().max(10000) })).max(200),
+})
+const previewInputSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('click'), x: z.number().min(0).max(1), y: z.number().min(0).max(1), button: z.enum(['left', 'right']).optional() }),
+  z.object({ type: z.literal('dblclick'), x: z.number().min(0).max(1), y: z.number().min(0).max(1) }),
+  z.object({ type: z.literal('move'), x: z.number().min(0).max(1), y: z.number().min(0).max(1) }),
+  z.object({ type: z.literal('scroll'), x: z.number().min(0).max(1), y: z.number().min(0).max(1), deltaX: z.number().min(-4000).max(4000), deltaY: z.number().min(-4000).max(4000) }),
+  z.object({ type: z.literal('key'), key: z.string().min(1).max(40), text: z.string().max(20).optional() }),
+])
 const locationCodeSchema = z.string().regex(/^[A-Z0-9-]{1,10}$/)
 const recommendedJobSchema = z.object({
   id: z.string().min(1).max(2500), source: z.enum(['ashby', 'greenhouse', 'lever', 'workable']), company: z.string().min(1).max(200),
@@ -285,10 +299,50 @@ app.delete('/api/jobs/saved', requireAuth, (request, response, next) => {
   } catch (error) { next(error) }
 })
 
+app.get('/api/automation/live-frames/:id', requireAuth, (request, response) => {
+  const run = automationManager.get(request.user!.id, String(request.params.id))
+  if (!run) return response.status(404).json({ error: { code: 'RUN_NOT_FOUND', message: 'Application run not found.' } })
+  touchAssistedSession(request.user!.id, run.id)
+  const preview = getRunPreview(run.id)
+  response.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+  response.type('image/jpeg').send(preview?.frame && preview.frame.length > 32 ? preview.frame : emptyJpeg)
+})
+
+app.post('/api/automation/live-input/:id', requireAuth, async (request, response, next) => {
+  try {
+    const input = previewInputSchema.parse(request.body)
+    const run = await automationManager.handleInput(request.user!.id, String(request.params.id), input)
+    response.json({ data: { run } })
+  } catch (error) { next(error) }
+})
+
 app.post('/api/automation/runs', requireAuth, (request, response, next) => {
   try {
     const input = automationRunSchema.parse(request.body)
     response.status(202).json({ data: { run: automationManager.create(request.user!.id, input.jobUrl, input.autoSubmit, input.testMode) } })
+  } catch (error) { next(error) }
+})
+
+app.post('/api/applications/inspect', requireAuth, (request, response, next) => {
+  try {
+    const input = automationRunSchema.parse(request.body)
+    const run = automationManager.create(request.user!.id, input.jobUrl, input.autoSubmit, input.testMode)
+    response.status(202).json({ data: { run, ats: run?.jobBoard, job: run?.job, schema: run?.application, capabilities: run?.capabilities } })
+  } catch (error) { next(error) }
+})
+
+app.patch('/api/applications/:id/answers', requireAuth, (request, response, next) => {
+  try {
+    const input = automationAnswersSchema.parse(request.body)
+    const run = automationManager.updateAnswers(request.user!.id, String(request.params.id), input.fields)
+    response.json({ data: { run } })
+  } catch (error) { next(error) }
+})
+
+app.post('/api/applications/:id/submit', requireAuth, async (request, response, next) => {
+  try {
+    const run = await automationManager.submit(request.user!.id, String(request.params.id))
+    response.json({ data: { run } })
   } catch (error) { next(error) }
 })
 
@@ -317,6 +371,28 @@ app.post('/api/automation/runs/:id/pause', requireAuth, (request, response, next
 app.post('/api/automation/runs/:id/submit', requireAuth, async (request, response, next) => {
   try {
     const run = await automationManager.submit(request.user!.id, String(request.params.id))
+    response.json({ data: { run } })
+  } catch (error) { next(error) }
+})
+
+app.post('/api/automation/runs/:id/assisted', requireAuth, async (request, response, next) => {
+  try {
+    const run = await automationManager.startAssisted(request.user!.id, String(request.params.id))
+    response.status(202).json({ data: { run } })
+  } catch (error) { next(error) }
+})
+
+app.post('/api/automation/runs/:id/assisted/cancel', requireAuth, async (request, response, next) => {
+  try {
+    const run = await automationManager.cancelAssisted(request.user!.id, String(request.params.id))
+    response.json({ data: { run } })
+  } catch (error) { next(error) }
+})
+
+app.patch('/api/automation/runs/:id/answers', requireAuth, (request, response, next) => {
+  try {
+    const input = automationAnswersSchema.parse(request.body)
+    const run = automationManager.updateAnswers(request.user!.id, String(request.params.id), input.fields)
     response.json({ data: { run } })
   } catch (error) { next(error) }
 })

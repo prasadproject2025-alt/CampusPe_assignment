@@ -167,6 +167,8 @@ for (const [name, definition] of profileMigrations) if (!profileColumns.has(name
 const automationRunColumns = new Set((db.prepare('PRAGMA table_info(automation_runs)').all() as Array<{ name: string }>).map((column) => column.name))
 if (!automationRunColumns.has('auto_submit')) db.exec('ALTER TABLE automation_runs ADD COLUMN auto_submit INTEGER NOT NULL DEFAULT 0')
 if (!automationRunColumns.has('test_mode')) db.exec('ALTER TABLE automation_runs ADD COLUMN test_mode INTEGER NOT NULL DEFAULT 0')
+if (!automationRunColumns.has('strategy')) db.exec('ALTER TABLE automation_runs ADD COLUMN strategy TEXT')
+if (!automationRunColumns.has('application_json')) db.exec('ALTER TABLE automation_runs ADD COLUMN application_json TEXT')
 
 const optimizationColumns = new Set((db.prepare('PRAGMA table_info(resume_optimizations)').all() as Array<{ name: string }>).map((column) => column.name))
 if (!optimizationColumns.has('storage_name')) db.exec('ALTER TABLE resume_optimizations ADD COLUMN storage_name TEXT')

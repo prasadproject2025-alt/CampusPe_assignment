@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 import { matchVisibleOption } from './ollama.js'
 
 test('returns the employer option exactly for a normalized AI choice', () => {
@@ -22,6 +23,13 @@ test('matches a short country code as a complete option token', () => {
 
 test('rejects an AI choice that is not displayed by the employer', () => {
   assert.equal(matchVisibleOption('Maybe', ['Yes', 'No']), null)
+})
+
+test('Ollama prompt forbids invented personal and legal facts', () => {
+  const source = readFileSync(new URL('./ollama.ts', import.meta.url), 'utf8')
+  assert.match(source, /Never invent facts/)
+  assert.match(source, /format: 'json'/)
+  assert.match(source, /temperature: 0\.1/)
 })
 
 test('keeps written answers unchanged when there are no fixed options', () => {

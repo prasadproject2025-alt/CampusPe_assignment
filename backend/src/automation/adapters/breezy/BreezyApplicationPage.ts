@@ -1,6 +1,8 @@
 import type { Locator, Page } from 'playwright-core'
 import type { AnswerValue, FieldType } from '../../../resolver/types.js'
 import type { AdapterQuestion, Blocker, EducationRecord, ResumeUpload } from '../../types.js'
+import { extractQuestionsFromPage } from '../../application/extraction/domExtractor.js'
+import { fillLiveAnswer } from '../../application/extraction/liveResolver.js'
 import { breezySelectors } from './selectors.js'
 
 export class BreezyApplicationPage {
@@ -13,58 +15,23 @@ export class BreezyApplicationPage {
   }
 
   async readQuestions(): Promise<AdapterQuestion[]> {
-    return this.page.locator(breezySelectors.form).evaluate((form) => {
-      type Control = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-      const questions: AdapterQuestion[] = []; const seen = new Set<string>()
-      const controls = [...form.querySelectorAll('input:not([type="hidden"]), textarea, select')] as Control[]
-      for (const control of controls) {
-        if (control.closest('[aria-hidden="true"]') || control.getAttribute('tabindex') === '-1' || control.getAttribute('ng-model')?.includes('candidateSchool')) continue
-        const isResume = control.type === 'file' && control.id === 'main-attachment'
-        const locator = control.id ? `id:${control.id}` : control.name ? `name:${control.name}` : control.matches('select.salary-details') ? 'class:salary-details' : ''
-        const id = isResume ? '_systemfield_resume' : locator
-        if (!id || seen.has(id)) continue
-        seen.add(id)
-        let text = control.getAttribute('placeholder') || ''
-        if (isResume) text = 'Resume/CV'
-        if (control.name === 'cSummary') text = 'Experience Summary'
-        if (control.name === 'cCoverLetter') text = 'Cover Letter'
-        if (control.name === 'gdprAgreement') text = 'Recruitment Privacy Notice consent'
-        if (!text && control instanceof HTMLSelectElement && control.matches('.salary-details')) text = 'Desired Salary period'
-        if (!text) {
-          const label = control.closest('label')
-          const section = control.closest('.section, .desired-salary')
-          text = (label?.textContent || section?.querySelector('h3')?.textContent || control.name || control.id).replace(/\s+/g, ' ').replace(/\s*\*\s*$/, '').trim()
-        }
-        const inputType = isResume ? 'file' : control.type === 'checkbox' ? 'checkbox' : control instanceof HTMLSelectElement ? 'select' : control instanceof HTMLTextAreaElement ? 'textarea' : control.type || 'text'
-        const fieldType: FieldType = inputType === 'textarea' ? 'textarea' : inputType === 'select' || inputType === 'checkbox' ? 'select' : inputType === 'number' ? 'number' : 'text'
-        const options = control instanceof HTMLSelectElement ? [...control.options].map((option) => option.textContent?.trim() || option.value).filter(Boolean) : inputType === 'checkbox' ? ['Yes'] : undefined
-        const answered = control instanceof HTMLInputElement && control.type === 'checkbox' ? control.checked : Boolean(control.value.trim())
-        questions.push({ id, text, fieldType, options, required: control.required, locator: { kind: 'field', value: locator }, answered, inputType })
-      }
-      const educationRequired = (form.querySelector('#education_required') as HTMLInputElement | null)?.value === 'required'
-      if (educationRequired) questions.push({ id: '_breezy_education', text: 'Education', fieldType: 'text', required: true, locator: { kind: 'education', value: '_breezy_education' }, answered: Boolean(form.querySelector('li[ng-repeat*="candidateSchool"]')), inputType: 'group' })
-      return questions
-    })
+    const questions = await extractQuestionsFromPage(this.page)
+    const educationRequired = await this.page.locator('#education_required').inputValue().catch(() => '')
+    if (educationRequired === 'required' && !questions.some((question) => question.locator.kind === 'education')) {
+      questions.push({ id: '_breezy_education', text: 'Education', fieldType: 'text', required: true, locator: { kind: 'education', value: '_breezy_education' }, answered: false, inputType: 'group' })
+    }
+    return questions
   }
 
   async focus(question: AdapterQuestion) {
     if (question.locator.kind === 'education') { await this.page.locator(breezySelectors.addEducation).scrollIntoViewIfNeeded(); return }
-    const input = this.inputFor(question)
     if (question.inputType === 'file') await this.page.locator(breezySelectors.resumeButton).first().scrollIntoViewIfNeeded()
-    else await input.scrollIntoViewIfNeeded()
+    else await this.page.getByText(question.text, { exact: false }).first().scrollIntoViewIfNeeded()
     await this.pause(400, 750)
   }
 
   async fill(question: AdapterQuestion, answer: AnswerValue) {
-    const input = this.inputFor(question); const desired = String(answer)
-    if (question.inputType === 'checkbox') {
-      const shouldCheck = /^(?:yes|true|1|agree|accepted)$/i.test(desired)
-      if (await input.isChecked() !== shouldCheck) await input.click()
-    } else if (question.inputType === 'select') {
-      await input.selectOption({ label: desired }).catch(() => input.selectOption(desired.toLowerCase()))
-    } else {
-      await input.click(); await input.fill(''); await input.pressSequentially(desired, { delay: this.random(50, 90), timeout: 90_000 })
-    }
+    await fillLiveAnswer(this.page, question, answer)
     await this.pause(450, 800)
   }
 
@@ -83,10 +50,10 @@ export class BreezyApplicationPage {
   }
 
   async uploadResume(resume: ResumeUpload) { await this.page.locator(breezySelectors.resume).setInputFiles(resume); await this.pause(900, 1_300) }
-  async uploadFile(question: AdapterQuestion, file: ResumeUpload) { await this.inputFor(question).setInputFiles(file) }
+  async uploadFile(question: AdapterQuestion, file: ResumeUpload) { await this.page.locator(breezySelectors.resume).setInputFiles(file) }
   async detectBlocker(): Promise<Blocker | null> {
     const captcha = this.page.locator(breezySelectors.recaptchaChallenge).first()
-    if (await captcha.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the visible browser, then continue.' }
+    if (await captcha.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
     return null
   }
   async isReadyForReview() { return this.page.locator(breezySelectors.submit).isVisible().catch(() => false) }
@@ -94,10 +61,6 @@ export class BreezyApplicationPage {
     const button = this.page.locator(breezySelectors.submit)
     if (!await button.isVisible()) throw new Error('The Breezy Submit Application button is not available.')
     await button.scrollIntoViewIfNeeded(); await this.pause(550, 900); await button.click()
-    const confirmation = this.page.getByText(/application (?:was |has been )?(?:submitted|received)|thank you for applying/i).first()
-    await confirmation.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined)
-    const blocker = await this.detectBlocker(); if (blocker) throw new Error(blocker.message)
-    if (await button.isVisible().catch(() => false)) throw new Error('Breezy did not confirm submission. Review the highlighted fields in the browser.')
   }
 
   private inputFor(question: AdapterQuestion): Locator {
