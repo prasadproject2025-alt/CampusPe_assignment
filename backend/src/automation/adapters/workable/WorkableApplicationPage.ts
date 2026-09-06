@@ -87,7 +87,14 @@ export class WorkableApplicationPage {
   async uploadFile(question: AdapterQuestion, file: ResumeUpload) { await (await resolveLiveControl(this.page, question)).setInputFiles(file) }
   async detectBlocker(): Promise<Blocker | null> {
     const captcha = this.page.locator(workableSelectors.captchaChallenge).first()
-    if (await captcha.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA on the employer site, then continue. JobCopilot will not bypass it.' }
+    if (await captcha.isVisible().catch(() => false)) {
+      const src = await captcha.getAttribute('src').catch(() => null)
+      let challengeType: 'recaptcha' | 'hcaptcha' | 'turnstile' | 'unknown' = 'unknown'
+      if (src && src.includes('hcaptcha')) challengeType = 'hcaptcha'
+      else if (src && src.includes('recaptcha')) challengeType = 'recaptcha'
+      else if (src && (src.includes('turnstile') || src.includes('cloudflare'))) challengeType = 'turnstile'
+      return { type: 'CAPTCHA', message: 'Complete the CAPTCHA on the employer site, then continue. JobCopilot will not bypass it.', provider: 'workable', challengeType }
+    }
     return null
   }
   async isReadyForReview() { return this.page.locator(workableSelectors.submit).isVisible().catch(() => false) }

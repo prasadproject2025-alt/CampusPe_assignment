@@ -35,7 +35,7 @@ export function questionsToFields(questions: AdapterQuestion[]): ApplicationFiel
 
 export function fieldToQuestion(field: ApplicationField): AdapterQuestion {
   return {
-    id: field.id,
+    id: field.canonicalId || field.id,
     text: field.text,
     fieldType: field.fieldType,
     options: field.options,
@@ -43,6 +43,7 @@ export function fieldToQuestion(field: ApplicationField): AdapterQuestion {
     locator: field.locator || { kind: field.inputType === 'education' ? 'education' : 'field', value: field.id },
     answered: Boolean(field.value.trim()) || field.status === 'accepted' || field.status === 'skipped',
     inputType: field.inputType,
+    canonicalField: field.canonicalId,
   }
 }
 

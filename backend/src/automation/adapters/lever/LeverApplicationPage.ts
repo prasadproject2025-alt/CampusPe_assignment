@@ -82,10 +82,18 @@ export class LeverApplicationPage {
   async detectBlocker(): Promise<Blocker | null> {
     const captchas = this.page.locator(leverSelectors.captchaChallenge)
     for (let index = 0; index < await captchas.count(); index += 1) {
-      if (await captchas.nth(index).isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
+      if (await captchas.nth(index).isVisible().catch(() => false)) {
+        const src = await captchas.nth(index).getAttribute('src').catch(() => null)
+        let challengeType: 'recaptcha' | 'hcaptcha' | 'unknown' = 'unknown'
+        if (src && src.includes('hcaptcha')) challengeType = 'hcaptcha'
+        else if (src && src.includes('recaptcha')) challengeType = 'recaptcha'
+        return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'lever', challengeType }
+      }
     }
     const challengeText = this.page.getByText(/drag one animal|matching silhouette|verify you are human|complete the challenge/i).first()
-    if (await challengeText.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
+    if (await challengeText.isVisible().catch(() => false)) {
+      return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'lever', challengeType: 'unknown' }
+    }
     return null
   }
   async isReadyForReview() {

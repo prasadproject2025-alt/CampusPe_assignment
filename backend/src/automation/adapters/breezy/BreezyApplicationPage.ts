@@ -53,7 +53,9 @@ export class BreezyApplicationPage {
   async uploadFile(question: AdapterQuestion, file: ResumeUpload) { await this.page.locator(breezySelectors.resume).setInputFiles(file) }
   async detectBlocker(): Promise<Blocker | null> {
     const captcha = this.page.locator(breezySelectors.recaptchaChallenge).first()
-    if (await captcha.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
+    if (await captcha.isVisible().catch(() => false)) {
+      return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'breezy', challengeType: 'recaptcha' }
+    }
     return null
   }
   async isReadyForReview() { return this.page.locator(breezySelectors.submit).isVisible().catch(() => false) }

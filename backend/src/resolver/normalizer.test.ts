@@ -100,3 +100,18 @@ test('classifies BambooHR location controls and country confirmation', () => {
   assert.equal(classifyQuestion(normalizeQuestion('ZIP')), 'postal_code')
   assert.equal(classifyQuestion(normalizeQuestion('Are you located in Poland?')), 'location_confirmation')
 })
+
+test('classifies Greenhouse office preference questions as willing_in_office', () => {
+  assert.equal(classifyQuestion(normalizeQuestion('Are you okay with working from the office location stated in this job posting 5 days a week?')), 'willing_in_office')
+  assert.equal(classifyQuestion(normalizeQuestion('Are you willing to work from the office?')), 'willing_in_office')
+  assert.equal(classifyQuestion(normalizeQuestion('Are you comfortable working onsite?')), 'willing_in_office')
+  assert.equal(classifyQuestion(normalizeQuestion('Are you willing to work onsite 5 days a week?')), 'willing_in_office')
+  assert.equal(classifyQuestion(normalizeQuestion('Are you okay with an in-office work arrangement?')), 'willing_in_office')
+})
+
+test('does NOT classify location or relocation questions as willing_in_office', () => {
+  assert.notEqual(classifyQuestion(normalizeQuestion('What city do you live in?')), 'willing_in_office')
+  assert.notEqual(classifyQuestion(normalizeQuestion('Where are you located?')), 'willing_in_office')
+  assert.notEqual(classifyQuestion(normalizeQuestion('Are you willing to relocate?')), 'willing_in_office')
+  assert.notEqual(classifyQuestion(normalizeQuestion('Would you be willing to relocate for this position?')), 'willing_in_office')
+})

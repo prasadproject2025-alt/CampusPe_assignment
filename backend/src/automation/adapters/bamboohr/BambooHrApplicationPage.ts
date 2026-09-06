@@ -29,7 +29,10 @@ export class BambooHrApplicationPage {
   async uploadResume(resume: ResumeUpload) { await this.page.locator(bambooHrSelectors.resume).setInputFiles(resume) }
   async waitForResumeParsing() { const resumeId = this.page.locator(bambooHrSelectors.resumeId); const deadline = Date.now() + 30_000; while (Date.now() < deadline) { if ((await resumeId.inputValue().catch(() => '')).trim()) return; await this.page.waitForTimeout(300) } throw new Error('BambooHR did not finish saving the résumé. Check the uploaded file in the live preview.') }
   async uploadFile(question: AdapterQuestion, file: ResumeUpload) { await this.inputFor(question).setInputFiles(file) }
-  async detectBlocker(): Promise<Blocker | null> { const captcha = this.page.locator(bambooHrSelectors.captchaChallenge).first(); return await captcha.isVisible().catch(() => false) ? { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' } : null }
+  async detectBlocker(): Promise<Blocker | null> {
+    const captcha = this.page.locator(bambooHrSelectors.captchaChallenge).first()
+    return await captcha.isVisible().catch(() => false) ? { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'bamboohr', challengeType: 'recaptcha' } : null
+  }
   async isReadyForReview() { return this.page.locator(bambooHrSelectors.submit).isVisible().catch(() => false) }
   async submit() { const button = this.page.locator(bambooHrSelectors.submit); if (!await button.isVisible()) throw new Error('The BambooHR Submit Application button is unavailable.'); await button.click() }
   private inputFor(question: AdapterQuestion): Locator { const value = question.locator.value; if (value === '_systemfield_resume') return this.page.locator(bambooHrSelectors.resume); if (value.startsWith('name:')) return this.page.locator(`[name="${this.escapeAttribute(value.slice(5))}"]`).first(); if (value.startsWith('id:')) return this.page.locator(`#${this.escapeId(value.slice(3))}`).first(); throw new Error(`Could not locate BambooHR field “${question.text}”.`) }

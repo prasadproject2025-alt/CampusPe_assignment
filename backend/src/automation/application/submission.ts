@@ -18,10 +18,16 @@ import {
   detectManualBlocker,
   waitForAtsConfirmation,
 } from './submissionConfirmation.js'
+import {
+  closeCaptchaSession,
+  getCaptchaSession,
+  hasActiveCaptchaSession,
+  type CaptchaSessionStage,
+} from './captchaHandoff.js'
 
 export type SubmissionResult =
   | { ok: true; code: 'SUBMISSION_SUCCESS' }
-  | { ok: false; code: 'MANUAL_REQUIRED'; blocker: { type: 'LOGIN' | 'CAPTCHA'; message: string } }
+  | { ok: false; code: 'MANUAL_REQUIRED'; blocker: { type: 'LOGIN' | 'CAPTCHA'; message: string; preserveSession?: boolean } }
   | { ok: false; code: 'ANSWER_REQUIRES_USER'; error: string; label?: string }
   | { ok: false; code: 'AMBIGUOUS_FIELD'; error: string; fieldKey?: string; label?: string }
   | { ok: false; code: 'FIELD_NOT_FOUND'; error: string; fieldKey?: string; label?: string }
@@ -118,20 +124,39 @@ export async function runReviewedSubmission(params: {
   userId: string
   jobUrl: string
   fields: ApplicationField[]
+  runId?: string
+  submitAttempted?: boolean
   confirmationTimeoutMs?: number
 }): Promise<SubmissionResult> {
   const timeoutMs = params.confirmationTimeoutMs ?? DEFAULT_CONFIRMATION_TIMEOUT_MS
+  const runId = params.runId
+  
   try {
     const filled = await fillReviewedApplicationOnPage(params)
     if (!filled.ok) return filled
     await assertLiveFormReadyToSubmit(params.adapter, params.page, params.fields)
+    
     await params.adapter.submitApplication(params.page)
+    
     if (!await atsConfirmationDetected(params.page)) {
       await waitForAtsConfirmation(params.page, {
         timeoutMs,
-        detectBlocker: () => detectManualBlocker(params.page, params.adapter),
+        detectBlocker: async () => {
+          const blocker = await detectManualBlocker(params.page, params.adapter)
+          if (blocker && blocker.type === 'CAPTCHA' && runId) {
+            // Signal to preserve session - manager will handle CAPTCHA session creation
+            // Include stage information (POST_SUBMIT since we already clicked submit)
+            return {
+              ...blocker,
+              preserveSession: true,
+              stage: 'POST_SUBMIT',
+            }
+          }
+          return blocker
+        },
       })
     }
+    
     if (!await atsConfirmationDetected(params.page)) {
       return {
         ok: false,
@@ -139,6 +164,12 @@ export async function runReviewedSubmission(params: {
         error: 'The employer site did not confirm submission. Clicking Submit is not enough.',
       }
     }
+    
+    // Success - close any CAPTCHA session
+    if (runId) {
+      await closeCaptchaSession(runId)
+    }
+    
     return { ok: true, code: 'SUBMISSION_SUCCESS' }
   } catch (error) {
     return mapSubmissionError(error)
@@ -149,6 +180,7 @@ export async function submitApplicationWithServerBrowser(
   jobUrl: string,
   userId: string,
   fields: ApplicationField[],
+  runId?: string,
   options: SubmissionOptions = {},
 ) {
   const adapter = options.adapter || detectAdapter(jobUrl)
@@ -156,23 +188,57 @@ export async function submitApplicationWithServerBrowser(
   return runWithBrowserPermit('submit', async () => {
     const { browser, context } = await launchHeadlessAutomationBrowser()
     const page = await context.newPage()
+    
     try {
       await adapter.openApplication(page, jobUrl)
       await adapter.waitForApplication(page)
-      return await runReviewedSubmission({
+      const result = await runReviewedSubmission({
         adapter,
         page,
         userId,
         jobUrl,
         fields,
+        runId,
         confirmationTimeoutMs: options.confirmationTimeoutMs,
       })
+      
+      // Check if CAPTCHA session was created during submission
+      const captchaSessionCreated = runId ? hasActiveCaptchaSession(runId) : false
+      
+      // If CAPTCHA session was created, ensure it has browser ownership
+      if (captchaSessionCreated && runId) {
+        const { createCaptchaSession, getCaptchaSession } = await import('./captchaHandoff.js')
+        const existingSession = getCaptchaSession(runId)
+        if (existingSession && !existingSession.browser) {
+          // Update session with browser/context ownership from the server browser
+          createCaptchaSession({
+            userId,
+            runId,
+            jobUrl,
+            adapter,
+            browser,
+            context,
+            page,
+            fields,
+            stage: existingSession.stage,
+            submitAttempted: existingSession.submitAttempted,
+            submitAttemptCount: existingSession.submitAttemptCount,
+          })
+        }
+      }
+      
+      return result
     } catch (error) {
       return mapSubmissionError(error)
     } finally {
-      await page.close().catch(() => undefined)
-      await context.close().catch(() => undefined)
-      await browser.close().catch(() => undefined)
+      // Only close browser if CAPTCHA session was NOT created
+      // When CAPTCHA session exists, ownership transfers to captchaHandoff
+      const captchaSessionCreated = runId ? hasActiveCaptchaSession(runId) : false
+      if (!captchaSessionCreated) {
+        await page.close().catch(() => undefined)
+        await context.close().catch(() => undefined)
+        await browser.close().catch(() => undefined)
+      }
     }
   })
 }

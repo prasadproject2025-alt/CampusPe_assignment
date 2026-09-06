@@ -4,6 +4,7 @@ import { greenhouseEmbedUrl } from './embedPolicy.js'
 import { isOptionOnlyLabel } from './extraction/fieldNormalizer.js'
 import { logApplicationSchema } from './schema.js'
 import { canonicalFieldId } from './canonicalIdentity.js'
+import { classifyQuestion, normalizeQuestion } from '../../resolver/normalizer.js'
 import type { ApplicationField } from './types.js'
 
 export function parseGreenhouseJobUrl(jobUrl: string) {
@@ -121,6 +122,8 @@ export function mapGreenhouseQuestions(payload: unknown): ApplicationField[] {
         const text = phoneCountry ? 'Phone country code' : (label || name.replace(/[_-]+/g, ' '))
         if (isOptionOnlyLabel(text)) return
         const inputType = phoneCountry ? 'country-code' : mapped.inputType
+        const normalizedQuestion = normalizeQuestion(text)
+        const canonicalField = classifyQuestion(normalizedQuestion)
         fields.push({
           id: canonicalFieldId({
             provider: 'greenhouse',
@@ -144,6 +147,7 @@ export function mapGreenhouseQuestions(payload: unknown): ApplicationField[] {
           status: mapped.inputType === 'file' ? 'skipped' : 'empty',
           reason: mapped.inputType === 'file' ? 'The saved resume is attached when the application is submitted.' : undefined,
           raw: { name, type, required: Boolean(question.required), optionCount: options.length },
+          canonicalId: canonicalField || undefined,
         })
       })
     }
@@ -187,6 +191,7 @@ export function fieldsToQuestions(fields: ApplicationField[]): AdapterQuestion[]
     locator: field.locator || { kind: 'field', value: field.id },
     answered: Boolean(field.value.trim()) || field.status === 'skipped',
     inputType: field.inputType,
+    canonicalField: field.canonicalId,
   }))
 }
 

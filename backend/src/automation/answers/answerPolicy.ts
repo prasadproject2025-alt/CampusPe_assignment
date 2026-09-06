@@ -1,5 +1,5 @@
 import { classifyQuestion, normalizeQuestion } from '../../resolver/normalizer.js'
-import { nonInferableFields, sensitiveFields } from '../../resolver/policy.js'
+import { nonInferableFields, safePreferenceFields, sensitiveFields } from '../../resolver/policy.js'
 
 export type AnswerClass = 'PROFILE_FACT' | 'RESUME_FACT' | 'DERIVED_FACT' | 'LLM_GENERATED' | 'USER_REQUIRED' | 'UNSUPPORTED'
 
@@ -20,6 +20,7 @@ export function classifyAnswerMode(label: string): AnswerClass {
   if (userRequiredPatterns.some((pattern) => pattern.test(normalized))) return 'USER_REQUIRED'
   const canonical = classifyQuestion(normalized)
   if (canonical && (sensitiveFields.has(canonical) || nonInferableFields.has(canonical))) return 'USER_REQUIRED'
+  if (canonical && safePreferenceFields.has(canonical)) return 'LLM_GENERATED'
   if (canonical && ['first_name', 'last_name', 'full_name', 'email', 'phone', 'linkedin_url', 'github_url', 'portfolio_url'].includes(canonical)) return 'PROFILE_FACT'
   if (canonical && ['total_experience_years', 'degree_type', 'education_school', 'current_company'].includes(canonical)) return 'DERIVED_FACT'
   if (canonical && ['motivation', 'career_motivation', 'cover_letter_intro', 'additional_information'].includes(canonical)) return 'LLM_GENERATED'

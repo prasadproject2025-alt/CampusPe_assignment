@@ -8,6 +8,14 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "node --import tsx --test --test-concurrency=1 $(find src -name '*.test.ts')",
+    "test:live-ashby": "tsx src/scripts/test-live-ashby.ts",
+    "diagnostic:ashby-presubmit": "tsx src/scripts/diagnostic-ashby-presubmit.ts",
+    "test:real-ashby-submission": "tsx src/scripts/test-real-ashby-submission.ts",
+    "test:live-greenhouse": "tsx src/scripts/test-live-greenhouse.ts",
+    "trace:greenhouse-payload": "tsx src/scripts/trace-greenhouse-payload.ts",
+    "diagnostic:greenhouse-presubmit": "tsx src/scripts/diagnostic-greenhouse-presubmit.ts",
+    "test:real-greenhouse-submission": "tsx src/scripts/test-real-greenhouse-submission.ts",
+    "test:real-lever-submission": "node --import tsx scripts/test-real-lever-submission.ts",
     "postinstall": "playwright install chromium chromium-headless-shell"
   },
   "dependencies": {

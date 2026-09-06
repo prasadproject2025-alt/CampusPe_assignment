@@ -41,7 +41,7 @@ const classifiers: Array<{ field: string; patterns: RegExp[] }> = [
   { field: 'current_salary', patterns: [/\bcurrent (?:annual |base |gross )?(?:salary|compensation|ctc)\b/, /\bpresent (?:annual |base |gross )?(?:salary|compensation|ctc)\b/, /\bexisting (?:annual |base |gross )?(?:salary|compensation|ctc)\b/] },
   { field: 'expected_salary', patterns: [/\bexpected (?:annual |base |gross )?(?:salary|compensation|ctc)\b/, /\bsalary expectation\b/, /\bdesired (?:annual |base |gross )?(?:salary|compensation)\b/] },
   { field: 'work_arrangement', patterns: [/\bremote.*hybrid.*on.?site\b/, /\bpreferred work arrangement\b/] },
-  { field: 'willing_in_office', patterns: [/\bopen to being in.?office\b/, /\bwilling to.*in.?office\b/, /\bin.?office 5 days\b/] },
+  { field: 'willing_in_office', patterns: [/\bopen to being in.?office\b/, /\bwilling to.*(?:in.?office|from the office|work onsite)\b/, /\bin.?office 5 days\b/, /\bokay with.*office\b/, /\bcomfortable.*office\b/, /\bworking from.*office\b/, /\bon.?site.*5 days\b/, /\bcomfortable.*onsite\b/, /\bwilling to work onsite\b/] },
   { field: 'willing_relocate', patterns: [/\bwilling to relocate\b/, /\bopen to relocat/] },
   { field: 'referral_source', patterns: [/\bhow did you hear about (?:us|this|the company|this opportunity|the opportunity|this role|the role)\b/, /\breferral source\b/] },
   { field: 'degree_type', patterns: [/^degree$/, /\bdegree type\b/, /\btype of degree\b/] },

@@ -34,6 +34,11 @@ export const DOM_EXTRACT_SCRIPT = `(() => {
     var key = ((name || '') + ' ' + (id || '')).toLowerCase();
     return /utm_|gclid|fbclid|recaptcha|csrf|authenticity_token|h-captcha|cf-turnstile|^nickname_/.test(key);
   }
+  function isAutocompleteSearch(control, question) {
+    var key = ((control.name || '') + ' ' + (control.id || '') + ' ' + (control.className || '')).toLowerCase();
+    var qKey = (question || '').toLowerCase();
+    return /^search$/i.test(qKey) && (/location|city|address|geocomplete|autocomplete/i.test(key) || control.getAttribute('role') === 'combobox');
+  }
   function generatedName(name) {
     return /^input_ca_\\d+_input$/i.test(name || '') || /^input_[a-z0-9]+_input$/i.test(name || '');
   }
@@ -191,6 +196,7 @@ export const DOM_EXTRACT_SCRIPT = `(() => {
     if (control.type === 'tel' && (bloated(question) || !question)) question = 'Phone';
     if (bloated(question)) continue;
     if ((control.name === 'country' || control.id === 'country') && /phone/i.test(question || '')) question = 'Phone country code';
+    if (isAutocompleteSearch(control, question)) continue;
     if (!question || optionLike(question)) continue;
     var answered = grouped.length ? grouped.some(function (item) { return item.checked; }) : (control.type === 'file' ? !!(control.files && control.files.length) : !!(control.value && String(control.value).trim()));
     var required = !!(control.required || control.getAttribute('aria-required') === 'true');

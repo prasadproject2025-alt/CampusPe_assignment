@@ -1,7 +1,7 @@
 import type { Browser, BrowserContext, Page } from 'playwright-core'
 import type { AnswerValue, FieldType, FormQuestion, JobContext } from '../resolver/types.js'
 
-export type AutomationStatus = 'QUEUED' | 'OPENING_JOB' | 'EXTRACTING_JOB' | 'FILLING_APPLICATION' | 'PAUSED_BY_USER' | 'PAUSED_NEEDS_INPUT' | 'PAUSED_LOGIN' | 'PAUSED_CAPTCHA' | 'READY_FOR_REVIEW' | 'SUBMITTING' | 'SUBMITTED' | 'FAILED'
+export type AutomationStatus = 'QUEUED' | 'OPENING_JOB' | 'EXTRACTING_JOB' | 'FILLING_APPLICATION' | 'PAUSED_BY_USER' | 'PAUSED_NEEDS_INPUT' | 'PAUSED_LOGIN' | 'PAUSED_CAPTCHA' | 'READY_FOR_REVIEW' | 'SUBMITTING' | 'SUBMITTED' | 'FAILED' | 'RESUMING'
 
 export type JobDetails = JobContext & {
   postingId: string | null
@@ -18,7 +18,14 @@ export type AdapterQuestion = FormQuestion & {
   inputType?: string
 }
 
-export type Blocker = { type: 'LOGIN' | 'CAPTCHA'; message: string }
+export type Blocker = { 
+  type: 'LOGIN' | 'CAPTCHA'; 
+  message: string;
+  provider?: string;
+  stage?: 'FILLING' | 'PRE_SUBMIT' | 'POST_SUBMIT';
+  challengeType?: 'recaptcha' | 'hcaptcha' | 'turnstile' | 'unknown';
+  preserveSession?: boolean;
+}
 export type EducationRecord = { school: string; degree: string; field: string; startDate: string; endDate: string; current?: boolean }
 export type ResumeUpload = { name: string; mimeType: string; buffer: Buffer }
 

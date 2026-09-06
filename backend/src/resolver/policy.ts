@@ -15,7 +15,8 @@ const alwaysManualPatterns = [
 ]
 
 export const sensitiveFields = new Set(['pronouns', 'gender', 'sexual_orientation', 'ethnicity', 'disability', 'veteran'])
-export const nonInferableFields = new Set(['work_authorized', 'us_work_authorized', 'sponsorship', 'us_sponsorship', 'us_visa_type', 'active_immigration_case', 'current_salary', 'expected_salary', 'notice_period', 'willing_in_office', 'willing_relocate', 'degree_type', 'current_city', 'current_state', 'current_country', 'postal_code', 'location_confirmation'])
+export const nonInferableFields = new Set(['work_authorized', 'us_work_authorized', 'sponsorship', 'us_sponsorship', 'us_visa_type', 'active_immigration_case', 'current_salary', 'expected_salary', 'notice_period', 'degree_type', 'current_city', 'current_state', 'current_country', 'postal_code', 'location_confirmation'])
+export const safePreferenceFields = new Set(['willing_in_office', 'willing_relocate'])
 
 export function nonDisclosureOption(options: string[] = []) {
   return options.find((option) => /\b(?:decline|prefer not|do not wish|dont wish|choose not|not disclose)\b/i.test(option)) ?? null

@@ -10,6 +10,13 @@ export const databasePath = resolve(dataDir, 'jobcopilot.db')
 export const encryptionKeyPath = resolve(dataDir, 'jobcopilot.key')
 export const port = Number(process.env.PORT || 3001)
 
+// CAPTCHA Configuration (backend-only, never exposed to frontend)
+export const captchaConfig = {
+  sessionTimeoutMs: Number(process.env.CAPTCHA_SESSION_TIMEOUT_MS || 600000), // 10 minutes default
+  monitorIntervalMs: Number(process.env.CAPTCHA_MONITOR_INTERVAL_MS || 2000), // 2 seconds default
+  capsolverApiKey: process.env.CAPSOLVER_API_KEY || null, // Optional: for future automated solving
+}
+
 process.umask(0o077)
 mkdirSync(dataDir, { recursive: true, mode: 0o700 })
 mkdirSync(uploadDir, { recursive: true, mode: 0o700 })

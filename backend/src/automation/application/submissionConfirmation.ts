@@ -36,17 +36,41 @@ export async function atsConfirmationDetected(page: Page) {
 
 export async function detectManualBlocker(page: Page, adapter: JobBoardAdapter): Promise<Blocker | null> {
   const fromAdapter = await adapter.detectBlocker(page)
-  if (fromAdapter) return fromAdapter
+  if (fromAdapter) {
+    // Normalize challenge type if adapter didn't provide it
+    if (fromAdapter.type === 'CAPTCHA' && !fromAdapter.challengeType) {
+      const challenges = page.locator(CHALLENGE_SELECTOR)
+      for (let index = 0; index < await challenges.count().catch(() => 0); index += 1) {
+        if (await challenges.nth(index).isVisible().catch(() => false)) {
+          const src = await challenges.nth(index).getAttribute('src').catch(() => null)
+          if (src && src.includes('hcaptcha')) {
+            return { ...fromAdapter, challengeType: 'hcaptcha' }
+          } else if (src && src.includes('recaptcha')) {
+            return { ...fromAdapter, challengeType: 'recaptcha' }
+          } else if (src && (src.includes('turnstile') || src.includes('cloudflare'))) {
+            return { ...fromAdapter, challengeType: 'turnstile' }
+          }
+          return { ...fromAdapter, challengeType: 'unknown' }
+        }
+      }
+    }
+    return fromAdapter
+  }
   const challenges = page.locator(CHALLENGE_SELECTOR)
   for (let index = 0; index < await challenges.count().catch(() => 0); index += 1) {
     if (await challenges.nth(index).isVisible().catch(() => false)) {
-      return { type: 'CAPTCHA', message: 'CAPTCHA or anti-bot challenge is blocking submission. JobCopilot will not bypass it.' }
+      const src = await challenges.nth(index).getAttribute('src').catch(() => null)
+      let challengeType: 'recaptcha' | 'hcaptcha' | 'turnstile' | 'unknown' = 'unknown'
+      if (src && src.includes('hcaptcha')) challengeType = 'hcaptcha'
+      else if (src && src.includes('recaptcha')) challengeType = 'recaptcha'
+      else if (src && (src.includes('turnstile') || src.includes('cloudflare'))) challengeType = 'turnstile'
+      return { type: 'CAPTCHA', message: 'CAPTCHA or anti-bot challenge is blocking submission. JobCopilot will not bypass it.', challengeType, provider: adapter.id }
     }
   }
   const heading = page.getByRole('heading', { name: /^(sign in|log in|log into|create an account)$/i }).first()
   const applicationControl = page.locator('form input:not([type="hidden"]):not([type="submit"]), form textarea, form select').first()
   if (await heading.isVisible().catch(() => false) && !await applicationControl.isVisible().catch(() => false)) {
-    return { type: 'LOGIN', message: 'Sign in on the employer site is required. JobCopilot will not continue past a login wall.' }
+    return { type: 'LOGIN', message: 'Sign in on the employer site is required. JobCopilot will not continue past a login wall.', provider: adapter.id }
   }
   return null
 }

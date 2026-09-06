@@ -1,9 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { approvedDeclarationAnswer, manualPolicyReason, nonDisclosureOption, nonInferableFields, sensitiveFields } from './policy.js'
+import { approvedDeclarationAnswer, manualPolicyReason, nonDisclosureOption, nonInferableFields, safePreferenceFields, sensitiveFields } from './policy.js'
 
 test('prevents AI inference for factual and preference answers', () => {
-  for (const field of ['work_authorized', 'us_sponsorship', 'active_immigration_case', 'current_salary', 'expected_salary', 'willing_in_office', 'willing_relocate']) assert.ok(nonInferableFields.has(field))
+  for (const field of ['work_authorized', 'us_sponsorship', 'active_immigration_case', 'current_salary', 'expected_salary']) assert.ok(nonInferableFields.has(field))
+})
+
+test('allows safe preference fields for LLM with visible options', () => {
+  for (const field of ['willing_in_office', 'willing_relocate']) assert.ok(safePreferenceFields.has(field))
+  assert.ok(!nonInferableFields.has('willing_in_office'))
+  assert.ok(!nonInferableFields.has('willing_relocate'))
 })
 
 test('keeps voluntary demographic fields out of AI fallback', () => {
@@ -28,4 +34,11 @@ test('keeps interview acknowledgements manual unless explicitly approved', () =>
     ['Select...', 'I acknowledge'],
   ), 'I acknowledge')
   assert.equal(approvedDeclarationAnswer('i acknowledge that all information is truthful', ['I acknowledge']), null)
+})
+
+test('willing_in_office and willing_relocate are safe preference fields', () => {
+  assert.ok(safePreferenceFields.has('willing_in_office'))
+  assert.ok(safePreferenceFields.has('willing_relocate'))
+  assert.ok(!nonInferableFields.has('willing_in_office'))
+  assert.ok(!nonInferableFields.has('willing_relocate'))
 })

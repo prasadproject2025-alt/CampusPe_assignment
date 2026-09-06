@@ -95,9 +95,17 @@ export class RipplingApplicationPage {
   async uploadFile(question: AdapterQuestion, file: ResumeUpload) { await this.inputFor(question).setInputFiles(file) }
   async detectBlocker(): Promise<Blocker | null> {
     const captcha = this.page.locator(ripplingSelectors.recaptchaChallenge).first()
-    if (await captcha.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
+    if (await captcha.isVisible().catch(() => false)) {
+      const src = await captcha.getAttribute('src').catch(() => null)
+      let challengeType: 'recaptcha' | 'turnstile' | 'unknown' = 'unknown'
+      if (src && src.includes('recaptcha')) challengeType = 'recaptcha'
+      else if (src && (src.includes('turnstile') || src.includes('challenge'))) challengeType = 'turnstile'
+      return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'rippling', challengeType }
+    }
     const verificationText = this.page.getByText(/verify (?:that )?you(?:'|’)re human|verify you are human|checking (?:that )?you are human|security verification|complete the security check/i).first()
-    if (await verificationText.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the human verification in the live preview, then continue.' }
+    if (await verificationText.isVisible().catch(() => false)) {
+      return { type: 'CAPTCHA', message: 'Complete the human verification in the live preview, then continue.', provider: 'rippling', challengeType: 'unknown' }
+    }
     return null
   }
   async isReadyForReview() {

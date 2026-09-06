@@ -3,7 +3,7 @@ import { db } from '../database.js'
 import { decryptJson, encryptJson } from '../security.js'
 import { classifyAnswerMode, sensitiveUserMessage } from '../automation/answers/answerPolicy.js'
 import { classifyQuestion, normalizeQuestion, questionSimilarity } from './normalizer.js'
-import { approvedDeclarationAnswer, manualPolicyReason, nonDisclosureOption, nonInferableFields, sensitiveFields } from './policy.js'
+import { approvedDeclarationAnswer, manualPolicyReason, nonDisclosureOption, nonInferableFields, safePreferenceFields, sensitiveFields } from './policy.js'
 import { OllamaAnswerProvider } from './ollama.js'
 import { matchNoticePeriodOption } from './optionMatcher.js'
 import type { AnswerValue, CandidateContext, FormQuestion, JobContext, LlmAnswerProvider, Resolution } from './types.js'
@@ -82,7 +82,7 @@ export class AnswerResolver {
 
   async resolve(userId: string, question: FormQuestion, job: JobContext = {}, options: { testMode?: boolean } = {}): Promise<Resolution> {
     const normalized = normalizeQuestion(question.text)
-    const canonical = classifyQuestion(normalized)
+    const canonical = question.canonicalField || classifyQuestion(normalized)
     const approvedDeclaration = approvedDeclarationAnswer(normalized, question.options)
     if (approvedDeclaration) return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: approvedDeclaration, source: 'L1_PROFILE', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used your explicit approval for the no-recording and no-transcribing acknowledgement.' })
     const manualReason = manualPolicyReason(normalized)
@@ -127,6 +127,7 @@ export class AnswerResolver {
       return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: matchedMemoryOption, source: 'L2_MEMORY', confidence: Number(memory.score.toFixed(2)), requiresReview: sensitiveFields.has(canonical ?? ''), canonicalField: canonical, explanation: 'Reused a previously approved answer to a semantically similar question.', memoryId: memory.row.id })
     }
     if (canonical && nonInferableFields.has(canonical) && !options.testMode) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'This factual or preference answer must come from your profile or a previously approved answer.', canonicalField: canonical, pauseCode: 'RESTRICTED_QUESTION' })
+    if (canonical && safePreferenceFields.has(canonical) && !options.testMode && !question.options?.length) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'This preference question requires options to be visible for safe selection.', canonicalField: canonical, pauseCode: 'MISSING_PROFILE_VALUE' })
     const answerMode = classifyAnswerMode(question.text)
     if (answerMode === 'USER_REQUIRED' && !options.testMode) {
       return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: sensitiveUserMessage(question.text) || 'Please provide this information.', canonicalField: canonical, pauseCode: 'RESTRICTED_QUESTION' })
@@ -136,10 +137,22 @@ export class AnswerResolver {
     if (!allowLlm && !options.testMode) {
       return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'No matching profile or resume fact was found. JobCopilot did not ask the model to invent an answer.', canonicalField: canonical, pauseCode: 'MISSING_PROFILE_VALUE' })
     }
-    if (!this.llm && options.testMode) return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: this.testAnswer(question), source: 'L3_LLM', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used a testing-only fallback because no model is configured. This run cannot be submitted.' })
+    if (!this.llm && options.testMode) {
+      // For optional fields in test mode, leave blank instead of using placeholder
+      if (!question.required) {
+        return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: '', source: 'L1_PROFILE', confidence: 1, requiresReview: false, canonicalField: canonical, explanation: 'Optional field left blank in test mode.' })
+      }
+      return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: this.testAnswer(question), source: 'L3_LLM', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used a testing-only fallback because no model is configured. This run cannot be submitted.' })
+    }
     if (!this.llm) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'No reliable profile or approved-memory answer was found, and no LLM provider is configured.', canonicalField: canonical, pauseCode: 'LLM_NOT_CONFIGURED' })
     const draft = await this.llm.resolve({ question, normalizedQuestion: normalized, canonicalField: canonical, candidate, job })
-    if (!draft && options.testMode) return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: this.testAnswer(question), source: 'L3_LLM', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used a testing-only fallback because the model declined. This run cannot be submitted.' })
+    if (!draft && options.testMode) {
+      // For optional fields in test mode, leave blank instead of using placeholder
+      if (!question.required) {
+        return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: '', source: 'L1_PROFILE', confidence: 1, requiresReview: false, canonicalField: canonical, explanation: 'Optional field left blank in test mode.' })
+      }
+      return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: this.testAnswer(question), source: 'L3_LLM', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used a testing-only fallback because the model declined. This run cannot be submitted.' })
+    }
     if (!draft) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'The LLM declined to generate a reliable answer.', canonicalField: canonical, pauseCode: 'LLM_DECLINED' })
     if (draft.confidence < .75 && !options.testMode) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'The generated draft did not meet the confidence threshold.', canonicalField: canonical, pauseCode: 'LOW_CONFIDENCE' })
     return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: draft.answer, source: 'L3_LLM', confidence: draft.confidence, requiresReview: true, canonicalField: canonical, explanation: draft.explanation })
@@ -166,12 +179,19 @@ export class AnswerResolver {
     const desired = normalize(String(answer))
     const exact = options.find((option) => normalize(option) === desired)
     if (exact) return exact
+    const caseInsensitiveExact = options.find((option) => option.toLowerCase() === String(answer).toLowerCase())
+    if (caseInsensitiveExact) return caseInsensitiveExact
     const containsPhrase = (value: string, phrase: string) => value === phrase || value.startsWith(`${phrase} `) || value.endsWith(` ${phrase}`) || value.includes(` ${phrase} `)
     const matches = options.filter((option) => { const candidate = normalize(option); return containsPhrase(candidate, desired) || containsPhrase(desired, candidate) })
     return matches.length === 1 ? matches[0]! : null
   }
 
   private testAnswer(question: FormQuestion): AnswerValue {
+    // For optional fields in test mode, return empty string instead of placeholder
+    if (!question.required) {
+      return ''
+    }
+
     const options = question.options ?? []
     const preferred = options.find((option) => /^(?:5|yes|i agree|i acknowledge|agree)$/i.test(option.trim()))
       ?? options.find((option) => /\b(?:yes|agree|acknowledge)\b/i.test(option))

@@ -8,6 +8,7 @@ export type FormQuestion = {
   fieldType: FieldType
   options?: string[]
   required: boolean
+  canonicalField?: string
 }
 
 export type JobContext = {

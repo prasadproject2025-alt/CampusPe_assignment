@@ -316,6 +316,7 @@ test('disposable submit worker does not treat a click as success', async (t) => 
         status: 'manual',
         locator: { kind: 'field', value: 'name:name' },
       }],
+      undefined,
       { adapter, confirmationTimeoutMs: 800 },
     )
   } catch (error) {

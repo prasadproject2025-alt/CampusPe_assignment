@@ -46,7 +46,18 @@ export class RecruiteeApplicationPage {
   async uploadResume(resume: ResumeUpload) { await this.page.locator(recruiteeSelectors.resume).setInputFiles(resume) }
   async waitForResumeParsing() { const input = this.page.locator(recruiteeSelectors.resume); const deadline = Date.now() + 30_000; while (Date.now() < deadline) { if ((await input.inputValue().catch(() => '')).trim()) return; await this.page.waitForTimeout(300) } throw new Error('Recruitee did not retain the uploaded résumé.') }
   async uploadFile(question: AdapterQuestion, file: ResumeUpload) { await this.inputFor(question).setInputFiles(file) }
-  async detectBlocker(): Promise<Blocker | null> { const captcha = this.page.locator(recruiteeSelectors.captchaChallenge).first(); return await captcha.isVisible().catch(() => false) ? { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' } : null }
+  async detectBlocker(): Promise<Blocker | null> {
+    const captcha = this.page.locator(recruiteeSelectors.captchaChallenge).first()
+    if (await captcha.isVisible().catch(() => false)) {
+      const src = await captcha.getAttribute('src').catch(() => null)
+      let challengeType: 'recaptcha' | 'hcaptcha' | 'turnstile' | 'unknown' = 'unknown'
+      if (src && src.includes('hcaptcha')) challengeType = 'hcaptcha'
+      else if (src && src.includes('recaptcha')) challengeType = 'recaptcha'
+      else if (src && (src.includes('turnstile') || src.includes('cloudflare'))) challengeType = 'turnstile'
+      return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'recruitee', challengeType }
+    }
+    return null
+  }
   async isReadyForReview() { return this.page.locator(recruiteeSelectors.submit).isVisible().catch(() => false) }
   async submit() { const button = this.page.locator(recruiteeSelectors.submit); if (!await button.isVisible()) throw new Error('The Recruitee Send button is unavailable.'); await button.click() }
   private inputFor(question: AdapterQuestion): Locator { if (question.locator.value === 'recruitee:phone-country' || /phone country/i.test(question.text)) return this.page.locator(recruiteeSelectors.phoneCountry); if (question.locator.value === '_systemfield_resume' || question.inputType === 'file') return this.page.locator(recruiteeSelectors.resume); if (question.locator.value.startsWith('name:')) return this.page.locator(`[name="${this.escapeAttribute(question.locator.value.slice(5))}"]`).first(); throw new Error(`Could not locate Recruitee field “${question.text}”.`) }

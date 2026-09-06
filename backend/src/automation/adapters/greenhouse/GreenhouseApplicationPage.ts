@@ -82,7 +82,9 @@ export class GreenhouseApplicationPage {
 
   async detectBlocker(): Promise<Blocker | null> {
     const challenge = this.page.locator(greenhouseSelectors.recaptchaChallenge).first()
-    if (await challenge.count() && await challenge.isVisible().catch(() => false)) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
+    if (await challenge.count() && await challenge.isVisible().catch(() => false)) {
+      return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'greenhouse', challengeType: 'recaptcha' }
+    }
     return null
   }
 

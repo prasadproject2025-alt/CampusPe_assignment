@@ -87,9 +87,13 @@ export class AshbyApplicationPage {
 
   async detectBlocker(): Promise<Blocker | null> {
     const challenge = this.page.locator(ashbySelectors.recaptchaChallenge)
-    if (await challenge.count() && await challenge.first().isVisible()) return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.' }
+    if (await challenge.count() && await challenge.first().isVisible()) {
+      return { type: 'CAPTCHA', message: 'Complete the CAPTCHA in the live preview, then continue.', provider: 'ashby', challengeType: 'recaptcha' }
+    }
     const login = this.page.getByText(/sign in|log in/i).first()
-    if (await login.count() && !await this.page.locator(ashbySelectors.questionTitle).count()) return { type: 'LOGIN', message: 'Sign in in the live preview, then continue.' }
+    if (await login.count() && !await this.page.locator(ashbySelectors.questionTitle).count()) {
+      return { type: 'LOGIN', message: 'Sign in in the live preview, then continue.', provider: 'ashby' }
+    }
     return null
   }
 

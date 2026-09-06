@@ -27,6 +27,7 @@ export type ApplicationField = {
   status: ApplicationFieldStatus
   reason?: string
   raw?: Record<string, unknown>
+  canonicalId?: string
 }
 
 export type ApplicationSection = {
