@@ -1,0 +1,775 @@
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:33:01.254"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:33:01.270"}
+{"level":"info","message":"SCENARIO 1: HAPPY PATH EXECUTION (ALL 6 STEPS)","timestamp":"2026-09-10 12:33:01.271"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:33:01.273"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:33:01.301"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_happy_01...","timestamp":"2026-09-10 12:33:01.317"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:33:08.563"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [PERSONAL_INFO]. Initiating re-authentication recovery.","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:33:08.800"}
+{"level":"info","message":"Session expiry modal detected on UI. Triggering modal re-authentication...","timestamp":"2026-09-10 12:33:08.883"}
+{"level":"error","message":"Session recovery failed: locator.waitFor: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#session-modal') to be hidden\u001b[22m\n\u001b[2m    14 × locator resolved to visible <div id=\"session-modal\" class=\"modal-overlay hidden\">…</div>\u001b[22m\n","timestamp":"2026-09-10 12:33:14.976"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [PERSONAL_INFO]. Initiating re-authentication recovery.","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:33:15.016"}
+{"level":"info","message":"Session expiry modal detected on UI. Triggering modal re-authentication...","timestamp":"2026-09-10 12:33:15.050"}
+{"level":"error","message":"Session recovery failed: locator.waitFor: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#session-modal') to be hidden\u001b[22m\n\u001b[2m    13 × locator resolved to visible <div id=\"session-modal\" class=\"modal-overlay hidden\">…</div>\u001b[22m\n","timestamp":"2026-09-10 12:33:20.388"}
+{"level":"warn","message":"Operation [Step_PERSONAL_INFO] failed on attempt 1/3 (locator.waitFor: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#session-modal') to be hidden\u001b[22m\n\u001b[2m    13 × locator resolved to visible <div id=\"session-modal\" class=\"modal-overlay hidden\">…</div>\u001b[22m\n). Retrying in 1143ms...","timestamp":"2026-09-10 12:33:20.389"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [PERSONAL_INFO]. Initiating re-authentication recovery.","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:33:21.564"}
+{"level":"info","message":"Session expiry modal detected on UI. Triggering modal re-authentication...","timestamp":"2026-09-10 12:33:21.599"}
+{"level":"error","message":"Session recovery failed: locator.waitFor: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#session-modal') to be hidden\u001b[22m\n\u001b[2m    14 × locator resolved to visible <div id=\"session-modal\" class=\"modal-overlay hidden\">…</div>\u001b[22m\n","timestamp":"2026-09-10 12:33:27.076"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [PERSONAL_INFO]. Initiating re-authentication recovery.","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:33:27.103"}
+{"level":"info","message":"Session expiry modal detected on UI. Triggering modal re-authentication...","timestamp":"2026-09-10 12:33:27.135"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:34:22.084"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:34:22.093"}
+{"level":"info","message":"SCENARIO 1: HAPPY PATH EXECUTION (ALL 6 STEPS)","timestamp":"2026-09-10 12:34:22.094"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:34:22.095"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:34:22.102"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_happy_01...","timestamp":"2026-09-10 12:34:22.104"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:34:22.982"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:34:23.511"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:34:23.514"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:34:23.860"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:34:23.862"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:34:24.361"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:34:24.368"}
+{"level":"error","message":"Operation [Step_RESUME_UPLOAD] failed permanently after 1 attempts: EPERM: operation not permitted, rename 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json.tmp' -> 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json'","timestamp":"2026-09-10 12:34:24.855"}
+{"level":"error","message":"FAILURE: EPERM: operation not permitted, rename 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json.tmp' -> 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json'","stack":"Error: EPERM: operation not permitted, rename 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json.tmp' -> 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json'\n    at Object.renameSync (node:fs:1074:11)\n    at StateManager.persist (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\state-manager.js:68:22)\n    at StateManager.markStepCompleted (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\state-manager.js:117:14)\n    at RetryHandler_1.RetryHandler.executeWithRetry.maxRetries (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:167:35)\n    at async RetryHandler.executeWithRetry (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\resilience\\RetryHandler.js:13:24)\n    at async ApplicationEngine.executeStepWithResilience (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:153:9)\n    at async ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:106:17)\n    at async runHappyPath (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:49:21)\n    at async main (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:156:37)","step":"ENGINE_ROOT","timestamp":"2026-09-10 12:34:24.859"}
+{"level":"info","message":"Failure screenshot captured: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\screenshots\\failure_cand_happy_01_1789023864861.png","timestamp":"2026-09-10 12:34:25.167"}
+{"level":"info","message":"Failure trace saved: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\failure_trace_cand_happy_01.zip","timestamp":"2026-09-10 12:34:26.144"}
+{"code":"EPERM","dest":"C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json","errno":-4048,"level":"error","message":"Demo execution failed: EPERM: operation not permitted, rename 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json.tmp' -> 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json'","path":"C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json.tmp","stack":"Error: EPERM: operation not permitted, rename 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json.tmp' -> 'C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\state\\app_cand_happy_01.json'\n    at Object.renameSync (node:fs:1074:11)\n    at StateManager.persist (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\state-manager.js:68:22)\n    at StateManager.markStepCompleted (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\state-manager.js:117:14)\n    at RetryHandler_1.RetryHandler.executeWithRetry.maxRetries (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:167:35)\n    at async RetryHandler.executeWithRetry (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\resilience\\RetryHandler.js:13:24)\n    at async ApplicationEngine.executeStepWithResilience (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:153:9)\n    at async ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:106:17)\n    at async runHappyPath (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:49:21)\n    at async main (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:156:37)","syscall":"rename","timestamp":"2026-09-10 12:34:26.448"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:34:54.913"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:34:54.921"}
+{"level":"info","message":"SCENARIO 1: HAPPY PATH EXECUTION (ALL 6 STEPS)","timestamp":"2026-09-10 12:34:54.922"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:34:54.922"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:34:54.928"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_happy_01...","timestamp":"2026-09-10 12:34:54.929"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:34:55.946"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:34:56.400"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:34:56.403"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:34:56.781"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:34:56.790"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:34:57.177"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:34:57.185"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:34:57.628"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:34:57.636"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:34:58.125"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:34:58.134"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:34:58.407"}
+{"level":"info","message":"Application APP-6063D151 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:34:58.593"}
+{"applicationId":"APP-6063D151","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 3.7s ===","timestamp":"2026-09-10 12:34:58.594"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_happy_01.zip","timestamp":"2026-09-10 12:34:59.735"}
+{"level":"info","message":"✔ Happy path verified successfully! Application ID: APP-6063D151","timestamp":"2026-09-10 12:35:00.013"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:35:09.348"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:35:09.355"}
+{"level":"info","message":"SCENARIO 2: SESSION EXPIRY DETECTION & AUTO-RESUMPTION","timestamp":"2026-09-10 12:35:09.356"}
+{"level":"info","message":"Requirement 4: Detects expired session, recovers, resumes from failed step","timestamp":"2026-09-10 12:35:09.357"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:35:09.358"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:35:09.362"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_session_expiry_02...","timestamp":"2026-09-10 12:35:09.363"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:35:10.245"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:35:10.779"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:35:10.782"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:35:11.110"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:35:11.113"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:35:11.479"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:35:11.483"}
+{"level":"warn","message":"⚡ [CHAOS INJECTOR] Forcibly invalidating candidate active session in auth store...","timestamp":"2026-09-10 12:35:11.864"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:35:11.892"}
+{"level":"info","message":"Re-authenticating via API login for cand_session_expiry_02@campuspe-candidate.org...","timestamp":"2026-09-10 12:35:11.916"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:35:11.937"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:35:11.980"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:35:12.286"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:35:12.292"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:35:12.885"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:35:12.896"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:35:13.238"}
+{"level":"info","message":"Application APP-54CF8A37 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:35:13.368"}
+{"applicationId":"APP-54CF8A37","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 4.0s ===","timestamp":"2026-09-10 12:35:13.370"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_session_expiry_02.zip","timestamp":"2026-09-10 12:35:14.810"}
+{"level":"info","message":"✔ Session expiry recovery verified! Total recoveries performed: 0","timestamp":"2026-09-10 12:35:15.703"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:37:26.404"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:37:26.409"}
+{"level":"info","message":"SCENARIO 1: HAPPY PATH EXECUTION (ALL 6 STEPS)","timestamp":"2026-09-10 12:37:26.409"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:37:26.410"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:37:26.415"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_happy_01...","timestamp":"2026-09-10 12:37:26.417"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:37:27.601"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:37:28.109"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:37:28.112"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:37:28.613"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:37:28.620"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:37:29.078"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:37:29.090"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:37:29.553"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:37:29.559"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:37:30.015"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:37:30.024"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:37:30.244"}
+{"level":"info","message":"Application APP-1CD3265A marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:37:30.401"}
+{"applicationId":"APP-1CD3265A","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 4.0s ===","timestamp":"2026-09-10 12:37:30.402"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_happy_01.zip","timestamp":"2026-09-10 12:37:31.785"}
+{"level":"info","message":"✔ Happy path verified successfully! Application ID: APP-1CD3265A","timestamp":"2026-09-10 12:37:32.082"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:37:32.084"}
+{"level":"info","message":"SCENARIO 2: SESSION EXPIRY DETECTION & AUTO-RESUMPTION","timestamp":"2026-09-10 12:37:32.084"}
+{"level":"info","message":"Requirement 4: Detects expired session, recovers, resumes from failed step","timestamp":"2026-09-10 12:37:32.085"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:37:32.085"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:37:32.091"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_session_expiry_02...","timestamp":"2026-09-10 12:37:32.092"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:37:33.222"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:37:33.965"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:37:33.971"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:37:34.567"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:37:34.576"}
+{"level":"warn","message":"⚡ [CHAOS INJECTOR] Forcibly invalidating candidate active session in auth store...","timestamp":"2026-09-10 12:37:34.593"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [EXPERIENCE]. Initiating re-authentication recovery.","step":"EXPERIENCE","timestamp":"2026-09-10 12:37:34.627"}
+{"level":"info","message":"Re-authenticating via API login for cand_session_expiry_02@campuspe-candidate.org...","timestamp":"2026-09-10 12:37:34.664"}
+{"level":"info","message":"Session restored. Resuming directly to step [EXPERIENCE] (Step #3) without restarting application.","timestamp":"2026-09-10 12:37:34.697"}
+{"level":"warn","message":"Application state marked RECOVERING on step [EXPERIENCE] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:37:34.783"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [EXPERIENCE]!","step":"EXPERIENCE","timestamp":"2026-09-10 12:37:34.784"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:37:35.294"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:37:35.303"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:37:35.815"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:37:35.822"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:37:36.274"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:37:36.283"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:37:36.552"}
+{"level":"info","message":"Application APP-FA7FDA6E marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:37:36.737"}
+{"applicationId":"APP-FA7FDA6E","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 4.6s ===","timestamp":"2026-09-10 12:37:36.738"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_session_expiry_02.zip","timestamp":"2026-09-10 12:37:38.142"}
+{"level":"info","message":"✔ Session expiry recovery verified! Total recoveries performed: 1","timestamp":"2026-09-10 12:37:38.462"}
+{"level":"info","message":"✔ Application completed without restarting! Application ID: APP-FA7FDA6E","timestamp":"2026-09-10 12:37:38.463"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:37:38.464"}
+{"level":"info","message":"SCENARIO 3: TRANSIENT FAILURE RETRY (500 ERROR & LATENCY)","timestamp":"2026-09-10 12:37:38.464"}
+{"level":"info","message":"Requirement 5 & 6: Exponential backoff with jitter on transient failures","timestamp":"2026-09-10 12:37:38.464"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:37:38.465"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:37:38.471"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_timeout_03...","timestamp":"2026-09-10 12:37:38.473"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:37:41.234"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:37:42.087"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:37:42.094"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [EDUCATION]. Initiating re-authentication recovery.","step":"EDUCATION","timestamp":"2026-09-10 12:37:42.936"}
+{"level":"info","message":"Re-authenticating via API login for cand_timeout_03@campuspe-candidate.org...","timestamp":"2026-09-10 12:37:42.965"}
+{"level":"info","message":"Session restored. Resuming directly to step [EDUCATION] (Step #2) without restarting application.","timestamp":"2026-09-10 12:37:43.788"}
+{"level":"warn","message":"Application state marked RECOVERING on step [EDUCATION] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:37:43.890"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [EDUCATION]!","step":"EDUCATION","timestamp":"2026-09-10 12:37:43.891"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:37:45.174"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:37:45.181"}
+{"level":"warn","message":"Operation [Step_EXPERIENCE] failed on attempt 1/3 (locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#step-pane-3') to be visible\u001b[22m\n\u001b[2m    23 × locator resolved to hidden <section id=\"step-pane-3\" class=\"step-pane hidden\">…</section>\u001b[22m\n). Retrying in 818ms...","timestamp":"2026-09-10 12:37:57.000"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:39:12.839"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:39:12.849"}
+{"level":"info","message":"SCENARIO 3: TRANSIENT FAILURE RETRY (500 ERROR & LATENCY)","timestamp":"2026-09-10 12:39:12.850"}
+{"level":"info","message":"Requirement 5 & 6: Exponential backoff with jitter on transient failures","timestamp":"2026-09-10 12:39:12.850"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:39:12.851"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:39:12.859"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_timeout_03...","timestamp":"2026-09-10 12:39:12.861"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:39:15.676"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:39:19.211"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:39:19.218"}
+{"level":"error","message":"Operation [Step_EDUCATION] failed permanently after 1 attempts: Step transition failed with server message: SimulatedTransientInternalServerError","timestamp":"2026-09-10 12:39:29.591"}
+{"level":"error","message":"FAILURE: Step transition failed with server message: SimulatedTransientInternalServerError","stack":"Error: Step transition failed with server message: SimulatedTransientInternalServerError\n    at EducationPage.submitAndAdvance (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\pages\\BasePage.js:42:23)\n    at async EducationPage.fillAndSubmit (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\pages\\EducationPage.js:20:9)\n    at async ApplicationEngine.dispatchStepAction (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:216:17)\n    at async RetryHandler_1.RetryHandler.executeWithRetry.maxRetries (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:160:17)\n    at async RetryHandler.executeWithRetry (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\resilience\\RetryHandler.js:13:24)\n    at async ApplicationEngine.executeStepWithResilience (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:153:9)\n    at async ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:106:17)\n    at async runNetworkTimeoutDemo (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:89:21)\n    at async main (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:162:50)","step":"ENGINE_ROOT","timestamp":"2026-09-10 12:39:29.596"}
+{"level":"info","message":"Failure screenshot captured: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\screenshots\\failure_cand_timeout_03_1789024169597.png","timestamp":"2026-09-10 12:39:30.129"}
+{"level":"info","message":"Failure trace saved: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\failure_trace_cand_timeout_03.zip","timestamp":"2026-09-10 12:39:32.250"}
+{"level":"error","message":"Demo execution failed: Step transition failed with server message: SimulatedTransientInternalServerError","stack":"Error: Step transition failed with server message: SimulatedTransientInternalServerError\n    at EducationPage.submitAndAdvance (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\pages\\BasePage.js:42:23)\n    at async EducationPage.fillAndSubmit (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\pages\\EducationPage.js:20:9)\n    at async ApplicationEngine.dispatchStepAction (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:216:17)\n    at async RetryHandler_1.RetryHandler.executeWithRetry.maxRetries (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:160:17)\n    at async RetryHandler.executeWithRetry (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\resilience\\RetryHandler.js:13:24)\n    at async ApplicationEngine.executeStepWithResilience (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:153:9)\n    at async ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:106:17)\n    at async runNetworkTimeoutDemo (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:89:21)\n    at async main (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:162:50)","timestamp":"2026-09-10 12:39:32.587"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:40:13.060"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:40:13.069"}
+{"level":"info","message":"SCENARIO 3: TRANSIENT FAILURE RETRY (500 ERROR & LATENCY)","timestamp":"2026-09-10 12:40:13.069"}
+{"level":"info","message":"Requirement 5 & 6: Exponential backoff with jitter on transient failures","timestamp":"2026-09-10 12:40:13.070"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:40:13.070"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:40:13.075"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_timeout_03...","timestamp":"2026-09-10 12:40:13.076"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:40:14.220"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:40:17.661"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:40:17.670"}
+{"level":"warn","message":"Operation [Step_EDUCATION] failed on attempt 1/3 (Step transition failed with server message: Simulated HTTP 500 Transient Internal Server Error). Retrying in 815ms...","timestamp":"2026-09-10 12:40:28.160"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:40:32.023"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:40:32.032"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:40:34.887"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:40:34.892"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:40:37.692"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:40:37.696"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:40:40.395"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:40:40.400"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:40:42.192"}
+{"level":"info","message":"Application APP-BD493948 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:40:42.359"}
+{"applicationId":"APP-BD493948","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 29.3s ===","timestamp":"2026-09-10 12:40:42.360"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_timeout_03.zip","timestamp":"2026-09-10 12:40:50.362"}
+{"level":"info","message":"✔ Transient failure overcome via exponential backoff! Application ID: APP-BD493948","timestamp":"2026-09-10 12:40:51.570"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:41:01.840"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:41:01.853"}
+{"level":"info","message":"SCENARIO 4: PROCESS / BROWSER CRASH RECOVERY FROM CHECKPOINT","timestamp":"2026-09-10 12:41:01.855"}
+{"level":"info","message":"Requirement 5 & 7: Browser killed mid-flow, state hydrated, resumes","timestamp":"2026-09-10 12:41:01.856"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:41:01.857"}
+{"level":"info","message":"Phase 1: Starting application and executing initial steps...","timestamp":"2026-09-10 12:41:01.860"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:41:01.868"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:41:02.449"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:41:02.452"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:41:02.455"}
+{"level":"warn","message":"💥 [CHAOS INJECTOR] Simulating unrecoverable browser process kill during Step 4...","timestamp":"2026-09-10 12:41:02.456"}
+{"level":"info","message":"Phase 2: Launching fresh engine instance to simulate worker restart / recovery...","timestamp":"2026-09-10 12:41:02.456"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE"],"currentStep":"RESUME_UPLOAD","level":"info","message":"Loaded existing application checkpoint from disk for candidate cand_crash_04","status":"PENDING","timestamp":"2026-09-10 12:41:02.458"}
+{"level":"info","message":"State recovered from disk checkpoint! Completed steps: PERSONAL_INFO, EDUCATION, EXPERIENCE","timestamp":"2026-09-10 12:41:02.459"}
+{"level":"info","message":"Next pending step to resume: RESUME_UPLOAD","timestamp":"2026-09-10 12:41:02.459"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:41:02.460"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:41:02.460"}
+{"level":"info","message":"Step [PERSONAL_INFO] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:41:03.530"}
+{"level":"info","message":"Step [EDUCATION] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:41:03.531"}
+{"level":"info","message":"Step [EXPERIENCE] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:41:03.531"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:41:03.534"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:41:03.667"}
+{"level":"info","message":"Re-authenticating via API login for cand_crash_04@campuspe-candidate.org...","timestamp":"2026-09-10 12:41:03.749"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:41:03.779"}
+{"level":"warn","message":"Application state marked RECOVERING on step [RESUME_UPLOAD] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:41:03.828"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:41:03.828"}
+{"level":"warn","message":"Operation [Step_RESUME_UPLOAD] failed on attempt 1/3 (Step transition failed with server message: Application null not found). Retrying in 1207ms...","timestamp":"2026-09-10 12:41:12.429"}
+{"level":"warn","message":"Operation [Step_RESUME_UPLOAD] failed on attempt 2/3 (Step transition failed with server message: Application null not found). Retrying in 2062ms...","timestamp":"2026-09-10 12:41:22.197"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:43:10.998"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:43:11.013"}
+{"level":"info","message":"SCENARIO 4: PROCESS / BROWSER CRASH RECOVERY FROM CHECKPOINT","timestamp":"2026-09-10 12:43:11.015"}
+{"level":"info","message":"Requirement 5 & 7: Browser killed mid-flow, state hydrated, resumes","timestamp":"2026-09-10 12:43:11.015"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:43:11.017"}
+{"level":"info","message":"Phase 1: Starting application and executing initial steps...","timestamp":"2026-09-10 12:43:11.019"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:43:11.033"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:43:12.092"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:43:12.097"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:43:12.100"}
+{"level":"warn","message":"💥 [CHAOS INJECTOR] Simulating unrecoverable browser process kill during Step 4...","timestamp":"2026-09-10 12:43:12.101"}
+{"level":"info","message":"Phase 2: Launching fresh engine instance to simulate worker restart / recovery...","timestamp":"2026-09-10 12:43:12.102"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE"],"currentStep":"RESUME_UPLOAD","level":"info","message":"Loaded existing application checkpoint from disk for candidate cand_crash_04","status":"PENDING","timestamp":"2026-09-10 12:43:12.105"}
+{"level":"info","message":"State recovered from disk checkpoint! Completed steps: PERSONAL_INFO, EDUCATION, EXPERIENCE","timestamp":"2026-09-10 12:43:12.106"}
+{"level":"info","message":"Next pending step to resume: RESUME_UPLOAD","timestamp":"2026-09-10 12:43:12.106"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:43:12.107"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:43:12.108"}
+{"level":"info","message":"Step [PERSONAL_INFO] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:43:13.228"}
+{"level":"info","message":"Step [EDUCATION] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:43:13.228"}
+{"level":"info","message":"Step [EXPERIENCE] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:43:13.229"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:43:13.233"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:43:13.349"}
+{"level":"info","message":"Re-authenticating via API login for cand_crash_04@campuspe-candidate.org...","timestamp":"2026-09-10 12:43:13.418"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:43:13.467"}
+{"level":"warn","message":"Application state marked RECOVERING on step [RESUME_UPLOAD] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:43:13.544"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:43:13.545"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:43:13.914"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:43:13.921"}
+{"level":"error","message":"Operation [Step_REVIEW] failed permanently after 1 attempts: Review validation failed: Candidate email was empty on review screen.","timestamp":"2026-09-10 12:43:14.021"}
+{"level":"error","message":"FAILURE: Review validation failed: Candidate email was empty on review screen.","stack":"Error: Review validation failed: Candidate email was empty on review screen.\n    at ReviewPage.verifyAndSubmit (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\pages\\ReviewPage.js:14:19)\n    at runNextTicks (node:internal/process/task_queues:65:5)\n    at process.processImmediate (node:internal/timers:541:9)\n    at async ApplicationEngine.dispatchStepAction (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:231:17)\n    at async RetryHandler_1.RetryHandler.executeWithRetry.maxRetries (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:160:17)\n    at async RetryHandler.executeWithRetry (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\resilience\\RetryHandler.js:13:24)\n    at async ApplicationEngine.executeStepWithResilience (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:153:9)\n    at async ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:106:17)\n    at async runBrowserCrashDemo (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:122:21)\n    at async main (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:165:49)","step":"ENGINE_ROOT","timestamp":"2026-09-10 12:43:14.022"}
+{"level":"info","message":"Failure screenshot captured: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\screenshots\\failure_cand_crash_04_1789024394023.png","timestamp":"2026-09-10 12:43:14.492"}
+{"level":"info","message":"Failure trace saved: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\failure_trace_cand_crash_04.zip","timestamp":"2026-09-10 12:43:15.045"}
+{"level":"error","message":"Demo execution failed: Review validation failed: Candidate email was empty on review screen.","stack":"Error: Review validation failed: Candidate email was empty on review screen.\n    at ReviewPage.verifyAndSubmit (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\pages\\ReviewPage.js:14:19)\n    at runNextTicks (node:internal/process/task_queues:65:5)\n    at process.processImmediate (node:internal/timers:541:9)\n    at async ApplicationEngine.dispatchStepAction (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:231:17)\n    at async RetryHandler_1.RetryHandler.executeWithRetry.maxRetries (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:160:17)\n    at async RetryHandler.executeWithRetry (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\resilience\\RetryHandler.js:13:24)\n    at async ApplicationEngine.executeStepWithResilience (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:153:9)\n    at async ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\src\\automation\\engine.js:106:17)\n    at async runBrowserCrashDemo (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:122:21)\n    at async main (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\dist\\scripts\\run-demo.js:165:49)","timestamp":"2026-09-10 12:43:15.170"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:44:16.229"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:44:16.239"}
+{"level":"info","message":"SCENARIO 4: PROCESS / BROWSER CRASH RECOVERY FROM CHECKPOINT","timestamp":"2026-09-10 12:44:16.240"}
+{"level":"info","message":"Requirement 5 & 7: Browser killed mid-flow, state hydrated, resumes","timestamp":"2026-09-10 12:44:16.241"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:44:16.241"}
+{"level":"info","message":"Phase 1: Starting application and executing steps 1, 2, 3...","timestamp":"2026-09-10 12:44:16.242"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:44:16.246"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:44:18.066"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:44:18.371"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:44:18.651"}
+{"level":"warn","message":"💥 [CHAOS INJECTOR] Simulating unrecoverable browser process kill during Step 4...","timestamp":"2026-09-10 12:44:18.652"}
+{"level":"info","message":"Phase 2: Launching fresh engine instance to simulate worker restart / recovery...","timestamp":"2026-09-10 12:44:18.851"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE"],"currentStep":"RESUME_UPLOAD","level":"info","message":"Loaded existing application checkpoint from disk for candidate cand_crash_04","status":"PENDING","timestamp":"2026-09-10 12:44:18.854"}
+{"level":"info","message":"State recovered from disk checkpoint! Completed steps: PERSONAL_INFO, EDUCATION, EXPERIENCE","timestamp":"2026-09-10 12:44:18.854"}
+{"level":"info","message":"Next pending step to resume: RESUME_UPLOAD","timestamp":"2026-09-10 12:44:18.855"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:44:18.855"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:44:18.856"}
+{"level":"info","message":"Step [PERSONAL_INFO] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:44:19.754"}
+{"level":"info","message":"Step [EDUCATION] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:44:19.754"}
+{"level":"info","message":"Step [EXPERIENCE] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:44:19.755"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:44:19.756"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:44:19.844"}
+{"level":"info","message":"Re-authenticating via API login for cand_crash_04@campuspe-candidate.org...","timestamp":"2026-09-10 12:44:19.858"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:44:19.872"}
+{"level":"warn","message":"Application state marked RECOVERING on step [RESUME_UPLOAD] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:44:20.022"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:44:20.023"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:44:20.327"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:44:20.331"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:44:20.823"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:44:20.825"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:44:20.950"}
+{"level":"info","message":"Application APP-BBDEA3EA marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:44:21.038"}
+{"applicationId":"APP-BBDEA3EA","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 2.2s ===","timestamp":"2026-09-10 12:44:21.038"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_crash_04.zip","timestamp":"2026-09-10 12:44:21.470"}
+{"level":"info","message":"✔ Crash recovery successfully completed from checkpoint! Application ID: APP-BBDEA3EA","timestamp":"2026-09-10 12:44:21.594"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:44:33.194"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:44:33.202"}
+{"level":"info","message":"SCENARIO 5: IDEMPOTENCY & DUPLICATE SUBMISSION PREVENTION","timestamp":"2026-09-10 12:44:33.203"}
+{"level":"info","message":"Requirement 9: Prevent duplicate submission on already completed applications","timestamp":"2026-09-10 12:44:33.203"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:44:33.204"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:44:33.209"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_idempotency_05...","timestamp":"2026-09-10 12:44:33.210"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:44:34.461"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:44:35.059"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:44:35.066"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:44:35.514"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:44:35.519"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:44:35.990"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:44:36.001"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:44:36.361"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:44:36.365"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:44:36.782"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:44:36.789"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:44:37.036"}
+{"level":"info","message":"Application APP-04C0F0AC marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:44:37.191"}
+{"applicationId":"APP-04C0F0AC","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 4.0s ===","timestamp":"2026-09-10 12:44:37.192"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_idempotency_05.zip","timestamp":"2026-09-10 12:44:38.092"}
+{"level":"info","message":"First submission succeeded with ID: APP-04C0F0AC","timestamp":"2026-09-10 12:44:38.307"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:44:46.562"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:44:46.566"}
+{"level":"info","message":"SCENARIO 1: HAPPY PATH EXECUTION (ALL 6 STEPS)","timestamp":"2026-09-10 12:44:46.568"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:44:46.569"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:44:46.574"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_happy_01...","timestamp":"2026-09-10 12:44:46.575"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:44:47.764"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:44:48.269"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:44:48.273"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:44:48.639"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:44:48.642"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:44:49.044"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:44:49.049"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:44:49.408"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:44:49.412"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:44:49.655"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:44:49.660"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:44:49.813"}
+{"level":"info","message":"Application APP-58D2D848 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:44:49.952"}
+{"applicationId":"APP-58D2D848","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 3.4s ===","timestamp":"2026-09-10 12:44:49.954"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_happy_01.zip","timestamp":"2026-09-10 12:44:50.657"}
+{"level":"info","message":"✔ Happy path verified successfully! Application ID: APP-58D2D848","timestamp":"2026-09-10 12:44:50.784"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:44:50.785"}
+{"level":"info","message":"SCENARIO 2: SESSION EXPIRY DETECTION & AUTO-RESUMPTION","timestamp":"2026-09-10 12:44:50.785"}
+{"level":"info","message":"Requirement 4: Detects expired session, recovers, resumes from failed step","timestamp":"2026-09-10 12:44:50.785"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:44:50.786"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:44:50.787"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_session_expiry_02...","timestamp":"2026-09-10 12:44:50.788"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:44:51.853"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:44:52.325"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:44:52.330"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:44:52.695"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:44:52.700"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:44:53.113"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:44:53.115"}
+{"level":"warn","message":"⚡ [CHAOS INJECTOR] Forcibly invalidating candidate active session in auth store...","timestamp":"2026-09-10 12:44:53.292"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:45:01.470"}
+{"level":"info","message":"Session expiry modal detected on UI. Triggering modal re-authentication...","timestamp":"2026-09-10 12:45:01.491"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:45:01.742"}
+{"level":"warn","message":"Application state marked RECOVERING on step [RESUME_UPLOAD] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:45:01.778"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:45:01.779"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:45:02.305"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:45:02.307"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:45:02.831"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:45:02.834"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:45:02.987"}
+{"level":"info","message":"Application APP-3990CA4C marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:45:03.100"}
+{"applicationId":"APP-3990CA4C","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 12.3s ===","timestamp":"2026-09-10 12:45:03.100"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_session_expiry_02.zip","timestamp":"2026-09-10 12:45:04.062"}
+{"level":"info","message":"✔ Session expiry recovery verified! Total recoveries performed: 1","timestamp":"2026-09-10 12:45:04.272"}
+{"level":"info","message":"✔ Application completed without restarting! Application ID: APP-3990CA4C","timestamp":"2026-09-10 12:45:04.273"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:45:04.273"}
+{"level":"info","message":"SCENARIO 3: TRANSIENT FAILURE RETRY (500 ERROR & LATENCY)","timestamp":"2026-09-10 12:45:04.273"}
+{"level":"info","message":"Requirement 5 & 6: Exponential backoff with jitter on transient failures","timestamp":"2026-09-10 12:45:04.273"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:45:04.273"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:45:04.275"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_timeout_03...","timestamp":"2026-09-10 12:45:04.275"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:45:05.198"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:45:08.466"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:45:08.470"}
+{"level":"warn","message":"Operation [Step_EDUCATION] failed on attempt 1/3 (Step transition failed with server message: Simulated HTTP 500 Transient Internal Server Error). Retrying in 844ms...","timestamp":"2026-09-10 12:45:18.539"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:45:22.289"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:45:22.297"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:45:25.190"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:45:25.197"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:45:27.950"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:45:27.953"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:45:30.610"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:45:30.618"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:45:32.448"}
+{"level":"info","message":"Application APP-BB9811BD marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:45:32.587"}
+{"applicationId":"APP-BB9811BD","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 28.3s ===","timestamp":"2026-09-10 12:45:32.588"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_timeout_03.zip","timestamp":"2026-09-10 12:45:35.777"}
+{"level":"info","message":"✔ Transient failure overcome via exponential backoff! Application ID: APP-BB9811BD","timestamp":"2026-09-10 12:45:36.147"}
+{"level":"info","message":"Step attempts: {\"PERSONAL_INFO\":1,\"EDUCATION\":1,\"EXPERIENCE\":1,\"RESUME_UPLOAD\":1,\"REVIEW\":1,\"SUBMIT\":1}","timestamp":"2026-09-10 12:45:36.147"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:45:36.148"}
+{"level":"info","message":"SCENARIO 4: PROCESS / BROWSER CRASH RECOVERY FROM CHECKPOINT","timestamp":"2026-09-10 12:45:36.148"}
+{"level":"info","message":"Requirement 5 & 7: Browser killed mid-flow, state hydrated, resumes","timestamp":"2026-09-10 12:45:36.148"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:45:36.149"}
+{"level":"info","message":"Phase 1: Starting application and executing steps 1, 2, 3...","timestamp":"2026-09-10 12:45:36.149"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:45:36.155"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:45:37.612"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:45:37.999"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:45:38.359"}
+{"level":"warn","message":"💥 [CHAOS INJECTOR] Simulating unrecoverable browser process kill during Step 4...","timestamp":"2026-09-10 12:45:38.359"}
+{"level":"info","message":"Phase 2: Launching fresh engine instance to simulate worker restart / recovery...","timestamp":"2026-09-10 12:45:38.488"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE"],"currentStep":"RESUME_UPLOAD","level":"info","message":"Loaded existing application checkpoint from disk for candidate cand_crash_04","status":"PENDING","timestamp":"2026-09-10 12:45:38.489"}
+{"level":"info","message":"State recovered from disk checkpoint! Completed steps: PERSONAL_INFO, EDUCATION, EXPERIENCE","timestamp":"2026-09-10 12:45:38.490"}
+{"level":"info","message":"Next pending step to resume: RESUME_UPLOAD","timestamp":"2026-09-10 12:45:38.490"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:45:38.490"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:45:38.491"}
+{"level":"info","message":"Step [PERSONAL_INFO] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:45:39.489"}
+{"level":"info","message":"Step [EDUCATION] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:45:39.489"}
+{"level":"info","message":"Step [EXPERIENCE] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:45:39.489"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:45:39.490"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:45:39.588"}
+{"level":"info","message":"Re-authenticating via API login for cand_crash_04@campuspe-candidate.org...","timestamp":"2026-09-10 12:45:39.610"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:45:39.628"}
+{"level":"warn","message":"Application state marked RECOVERING on step [RESUME_UPLOAD] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:45:39.685"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:45:39.686"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:45:40.034"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:45:40.039"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:45:40.288"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:45:40.291"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:45:40.421"}
+{"level":"info","message":"Application APP-5AD9E0D8 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:45:40.517"}
+{"applicationId":"APP-5AD9E0D8","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 2.0s ===","timestamp":"2026-09-10 12:45:40.518"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_crash_04.zip","timestamp":"2026-09-10 12:45:41.053"}
+{"level":"info","message":"✔ Crash recovery successfully completed from checkpoint! Application ID: APP-5AD9E0D8","timestamp":"2026-09-10 12:45:41.289"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:45:41.290"}
+{"level":"info","message":"SCENARIO 5: IDEMPOTENCY & DUPLICATE SUBMISSION PREVENTION","timestamp":"2026-09-10 12:45:41.290"}
+{"level":"info","message":"Requirement 9: Prevent duplicate submission on already completed applications","timestamp":"2026-09-10 12:45:41.290"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:45:41.290"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:45:41.295"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_idempotency_05...","timestamp":"2026-09-10 12:45:41.296"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:45:42.711"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:45:43.260"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:45:43.263"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:45:43.598"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:45:43.601"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:45:43.964"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:45:43.966"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:45:44.301"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:45:44.305"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:45:44.636"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:45:44.640"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:45:44.856"}
+{"level":"info","message":"Application APP-D1067DCC marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:45:44.954"}
+{"applicationId":"APP-D1067DCC","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 3.7s ===","timestamp":"2026-09-10 12:45:44.954"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_idempotency_05.zip","timestamp":"2026-09-10 12:45:45.949"}
+{"level":"info","message":"First submission succeeded with ID: APP-D1067DCC","timestamp":"2026-09-10 12:45:46.235"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:46:12.560"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_happy_path...","timestamp":"2026-09-10 12:46:12.570"}
+{"level":"error","message":"FAILURE: tracing.start: Tracing has been already started","stack":"tracing.start: Tracing has been already started\n    at ApplicationEngine.initializeBrowser (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\engine.ts:70:34)\n    at ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\engine.ts:106:9)\n    at C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\tests\\job-application.spec.ts:13:21","step":"ENGINE_ROOT","timestamp":"2026-09-10 12:46:13.021"}
+{"level":"info","message":"Failure trace saved: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\failure_trace_test_happy_path.zip","timestamp":"2026-09-10 12:46:13.057"}
+{"completedSteps":[],"currentStep":"PERSONAL_INFO","level":"info","message":"Loaded existing application checkpoint from disk for candidate test_happy_path","status":"PENDING","timestamp":"2026-09-10 12:47:17.433"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:47:17.437"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_happy_path...","timestamp":"2026-09-10 12:47:17.438"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:47:19.163"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:47:20.216"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:47:20.224"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:47:20.981"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:47:20.994"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:47:21.703"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:47:21.717"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:47:22.311"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:47:22.321"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:47:22.914"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:47:22.923"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:47:23.259"}
+{"level":"info","message":"Application APP-3071BCB6 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:47:23.502"}
+{"applicationId":"APP-3071BCB6","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 6.1s ===","timestamp":"2026-09-10 12:47:23.503"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_happy_path.zip","timestamp":"2026-09-10 12:47:25.326"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:47:25.766"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_session_expiry...","timestamp":"2026-09-10 12:47:25.769"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:47:27.706"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:47:28.637"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:47:28.643"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:47:29.262"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:47:29.270"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:47:30.011"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:47:30.017"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:47:30.531"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:47:30.539"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:47:31.074"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:47:31.083"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:47:31.442"}
+{"level":"info","message":"Application APP-12067BC2 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:47:31.623"}
+{"applicationId":"APP-12067BC2","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 5.9s ===","timestamp":"2026-09-10 12:47:31.625"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_session_expiry.zip","timestamp":"2026-09-10 12:47:33.155"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:47:35.640"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_transient_failure...","timestamp":"2026-09-10 12:47:35.648"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:47:37.039"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:47:37.900"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:47:37.907"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:47:38.671"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:47:38.681"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:47:39.430"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:47:39.439"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:47:39.949"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:47:39.957"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:47:40.400"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:47:40.410"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:47:40.688"}
+{"level":"info","message":"Application APP-F6836D40 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:47:40.866"}
+{"applicationId":"APP-F6836D40","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 5.2s ===","timestamp":"2026-09-10 12:47:40.868"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_transient_failure.zip","timestamp":"2026-09-10 12:47:42.563"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:47:44.609"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:47:44.623"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION"],"currentStep":"EXPERIENCE","level":"info","message":"Loaded existing application checkpoint from disk for candidate test_crash_recovery","status":"PENDING","timestamp":"2026-09-10 12:47:44.629"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:47:44.646"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_crash_recovery...","timestamp":"2026-09-10 12:47:44.649"}
+{"level":"info","message":"Step [PERSONAL_INFO] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:47:45.849"}
+{"level":"info","message":"Step [EDUCATION] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:47:45.850"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:47:45.854"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [EXPERIENCE]. Initiating re-authentication recovery.","step":"EXPERIENCE","timestamp":"2026-09-10 12:47:46.079"}
+{"level":"info","message":"Re-authenticating via API login for test_crash_recovery@campuspe-candidate.org...","timestamp":"2026-09-10 12:47:46.098"}
+{"level":"info","message":"Session restored. Resuming directly to step [EXPERIENCE] (Step #3) without restarting application.","timestamp":"2026-09-10 12:47:46.115"}
+{"level":"warn","message":"Application state marked RECOVERING on step [EXPERIENCE] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:47:46.208"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [EXPERIENCE]!","step":"EXPERIENCE","timestamp":"2026-09-10 12:47:46.209"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:47:46.992"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:47:46.999"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:47:47.562"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:47:47.567"}
+{"level":"error","message":"Operation [Step_REVIEW] failed permanently after 1 attempts: Review validation failed: Candidate email was empty on review screen.","timestamp":"2026-09-10 12:47:47.710"}
+{"level":"error","message":"FAILURE: Review validation failed: Candidate email was empty on review screen.","stack":"Error: Review validation failed: Candidate email was empty on review screen.\n    at ReviewPage.verifyAndSubmit (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\pages\\ReviewPage.ts:15:13)\n    at ApplicationEngine.dispatchStepAction (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\engine.ts:275:9)\n    at _RetryHandler.RetryHandler.executeWithRetry.maxRetries (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\engine.ts:196:11)\n    at RetryHandler.executeWithRetry (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\resilience\\RetryHandler.ts:23:16)\n    at ApplicationEngine.executeStepWithResilience (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\engine.ts:186:5)\n    at ApplicationEngine.run (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\src\\automation\\engine.ts:123:9)\n    at C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\tests\\job-application.spec.ts:84:21\n    at C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\worker\\workerProcessEntry.js:1655:9\n    at C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\worker\\workerProcessEntry.js:1135:11\n    at TimeoutManager.withRunnable (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\worker\\workerProcessEntry.js:403:14)\n    at TestInfoImpl._runWithTimeout (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\worker\\workerProcessEntry.js:1133:7)\n    at C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\worker\\workerProcessEntry.js:1653:7\n    at WorkerMain._runTest (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\worker\\workerProcessEntry.js:1626:5)\n    at WorkerMain.runTestGroup (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\worker\\workerProcessEntry.js:1521:9)\n    at process.<anonymous> (C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\node_modules\\playwright\\lib\\common\\index.js:1941:25)","step":"ENGINE_ROOT","timestamp":"2026-09-10 12:47:47.713"}
+{"level":"info","message":"Failure screenshot captured: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\screenshots\\failure_test_crash_recovery_1789024667714.png","timestamp":"2026-09-10 12:47:48.251"}
+{"level":"info","message":"Failure trace saved: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\failure_trace_test_crash_recovery.zip","timestamp":"2026-09-10 12:47:49.231"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:47:50.811"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_idempotency...","timestamp":"2026-09-10 12:47:50.820"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:47:51.970"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:47:52.589"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:47:52.592"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:47:53.561"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:47:53.568"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:47:54.127"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:47:54.136"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:47:54.551"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:47:54.557"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:47:54.985"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:47:54.994"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:47:55.229"}
+{"level":"info","message":"Application APP-D4408923 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:47:55.382"}
+{"applicationId":"APP-D4408923","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 4.6s ===","timestamp":"2026-09-10 12:47:55.384"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_idempotency.zip","timestamp":"2026-09-10 12:47:56.967"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE","RESUME_UPLOAD","REVIEW","SUBMIT"],"currentStep":"SUBMIT","level":"info","message":"Loaded existing application checkpoint from disk for candidate test_idempotency","status":"SUBMITTED","timestamp":"2026-09-10 12:47:57.179"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:47:57.181"}
+{"applicationId":"APP-D4408923","level":"warn","message":"IdempotencyGuard: Application for candidate test_idempotency is already marked SUBMITTED on disk. Blocking duplicate submission attempt.","submittedAt":"9/10/2026, 12:47:54 PM","timestamp":"2026-09-10 12:47:57.181"}
+{"level":"info","message":"Returning cached submission receipt for application APP-D4408923","timestamp":"2026-09-10 12:47:57.182"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:48:37.872"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_spec_happy_path...","timestamp":"2026-09-10 12:48:37.885"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:48:39.198"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:48:40.267"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:48:40.271"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:48:40.991"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:48:41.001"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:48:41.629"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:48:41.635"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:48:42.137"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:48:42.143"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:48:42.562"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:48:42.568"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:48:42.863"}
+{"level":"info","message":"Application APP-CFAF6646 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:48:43.025"}
+{"applicationId":"APP-CFAF6646","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 5.2s ===","timestamp":"2026-09-10 12:48:43.026"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_spec_happy_path.zip","timestamp":"2026-09-10 12:48:44.844"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:48:45.257"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_spec_session_expiry...","timestamp":"2026-09-10 12:48:45.260"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:48:46.434"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:48:47.283"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:48:47.290"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [EDUCATION]. Initiating re-authentication recovery.","step":"EDUCATION","timestamp":"2026-09-10 12:48:56.098"}
+{"level":"info","message":"Session expiry modal detected on UI. Triggering modal re-authentication...","timestamp":"2026-09-10 12:48:56.134"}
+{"level":"info","message":"Session restored. Resuming directly to step [EDUCATION] (Step #2) without restarting application.","timestamp":"2026-09-10 12:48:56.349"}
+{"level":"warn","message":"Application state marked RECOVERING on step [EDUCATION] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:48:56.411"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [EDUCATION]!","step":"EDUCATION","timestamp":"2026-09-10 12:48:56.411"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:48:56.918"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:48:56.923"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:48:57.428"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:48:57.435"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:48:57.871"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:48:57.889"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:48:58.411"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:48:58.418"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:48:58.651"}
+{"level":"info","message":"Application APP-BD789B3C marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:48:58.815"}
+{"applicationId":"APP-BD789B3C","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 13.6s ===","timestamp":"2026-09-10 12:48:58.816"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_spec_session_expiry.zip","timestamp":"2026-09-10 12:49:00.948"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:49:01.344"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_spec_transient_failure...","timestamp":"2026-09-10 12:49:01.346"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:49:02.806"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:49:03.535"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:49:03.543"}
+{"level":"warn","message":"Operation [Step_EDUCATION] failed on attempt 1/3 (Step transition failed with server message: Simulated HTTP 500 Transient Internal Server Error). Retrying in 698ms...","timestamp":"2026-09-10 12:49:12.251"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:49:13.580"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:49:13.591"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:49:14.367"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:49:14.374"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:49:14.779"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:49:14.785"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:49:15.388"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:49:15.395"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:49:15.648"}
+{"level":"info","message":"Application APP-B213F092 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:49:15.806"}
+{"applicationId":"APP-B213F092","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 14.5s ===","timestamp":"2026-09-10 12:49:15.808"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_spec_transient_failure.zip","timestamp":"2026-09-10 12:49:18.009"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_spec_crash_recovery...","timestamp":"2026-09-10 12:49:18.421"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:49:19.900"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:49:20.308"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:49:20.733"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE"],"currentStep":"RESUME_UPLOAD","level":"info","message":"Loaded existing application checkpoint from disk for candidate test_spec_crash_recovery","status":"PENDING","timestamp":"2026-09-10 12:49:20.939"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:49:20.941"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_spec_crash_recovery...","timestamp":"2026-09-10 12:49:20.942"}
+{"level":"info","message":"Step [PERSONAL_INFO] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:49:21.871"}
+{"level":"info","message":"Step [EDUCATION] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:49:21.872"}
+{"level":"info","message":"Step [EXPERIENCE] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:49:21.872"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:49:21.874"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:49:21.969"}
+{"level":"info","message":"Re-authenticating via API login for test_spec_crash_recovery@campuspe-candidate.org...","timestamp":"2026-09-10 12:49:21.985"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:49:22.005"}
+{"level":"warn","message":"Application state marked RECOVERING on step [RESUME_UPLOAD] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:49:22.103"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:49:22.103"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:49:22.472"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:49:22.476"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:49:23.026"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:49:23.031"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:49:23.176"}
+{"level":"info","message":"Application APP-CF730964 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:49:23.273"}
+{"applicationId":"APP-CF730964","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 2.3s ===","timestamp":"2026-09-10 12:49:23.274"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_spec_crash_recovery.zip","timestamp":"2026-09-10 12:49:23.880"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:49:24.143"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate test_spec_idempotency...","timestamp":"2026-09-10 12:49:24.145"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:49:25.209"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:49:25.625"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:49:25.628"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:49:25.969"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:49:25.972"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:49:26.376"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:49:26.380"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:49:26.682"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:49:26.686"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:49:27.189"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:49:27.195"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:49:27.331"}
+{"level":"info","message":"Application APP-51113B81 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:49:27.449"}
+{"applicationId":"APP-51113B81","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 3.3s ===","timestamp":"2026-09-10 12:49:27.449"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_test_spec_idempotency.zip","timestamp":"2026-09-10 12:49:28.360"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE","RESUME_UPLOAD","REVIEW","SUBMIT"],"currentStep":"SUBMIT","level":"info","message":"Loaded existing application checkpoint from disk for candidate test_spec_idempotency","status":"SUBMITTED","timestamp":"2026-09-10 12:49:28.551"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:49:28.551"}
+{"applicationId":"APP-51113B81","level":"warn","message":"IdempotencyGuard: Application for candidate test_spec_idempotency is already marked SUBMITTED on disk. Blocking duplicate submission attempt.","submittedAt":"9/10/2026, 12:49:27 PM","timestamp":"2026-09-10 12:49:28.551"}
+{"level":"info","message":"Returning cached submission receipt for application APP-51113B81","timestamp":"2026-09-10 12:49:28.552"}
+{"level":"info","message":"[Demo Runner] Test Server active at http://localhost:3000","timestamp":"2026-09-10 12:49:39.477"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:49:39.502"}
+{"level":"info","message":"SCENARIO 1: HAPPY PATH EXECUTION (ALL 6 STEPS)","timestamp":"2026-09-10 12:49:39.504"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:49:39.505"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:49:39.514"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_happy_01...","timestamp":"2026-09-10 12:49:39.516"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:49:40.698"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:49:41.132"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:49:41.135"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:49:41.498"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:49:41.501"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:49:41.913"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:49:41.916"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:49:42.259"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:49:42.264"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:49:42.537"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:49:42.540"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:49:42.661"}
+{"level":"info","message":"Application APP-D305F893 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:49:42.750"}
+{"applicationId":"APP-D305F893","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 3.2s ===","timestamp":"2026-09-10 12:49:42.751"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_happy_01.zip","timestamp":"2026-09-10 12:49:43.626"}
+{"level":"info","message":"✔ Happy path verified successfully! Application ID: APP-D305F893","timestamp":"2026-09-10 12:49:43.754"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:49:43.755"}
+{"level":"info","message":"SCENARIO 2: SESSION EXPIRY DETECTION & AUTO-RESUMPTION","timestamp":"2026-09-10 12:49:43.755"}
+{"level":"info","message":"Requirement 4: Detects expired session, recovers, resumes from failed step","timestamp":"2026-09-10 12:49:43.755"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:49:43.755"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:49:43.758"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_session_expiry_02...","timestamp":"2026-09-10 12:49:43.759"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:49:44.604"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:49:45.048"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:49:45.051"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:49:45.410"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:49:45.415"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:49:45.786"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:49:45.789"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:49:46.123"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:49:46.127"}
+{"level":"warn","message":"⚡ [CHAOS INJECTOR] Forcibly invalidating candidate active session in auth store...","timestamp":"2026-09-10 12:49:46.258"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [REVIEW]. Initiating re-authentication recovery.","step":"REVIEW","timestamp":"2026-09-10 12:49:58.404"}
+{"level":"info","message":"Session expiry modal detected on UI. Triggering modal re-authentication...","timestamp":"2026-09-10 12:49:58.420"}
+{"level":"info","message":"Session restored. Resuming directly to step [REVIEW] (Step #5) without restarting application.","timestamp":"2026-09-10 12:49:58.673"}
+{"level":"warn","message":"Application state marked RECOVERING on step [REVIEW] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:49:58.728"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [REVIEW]!","step":"REVIEW","timestamp":"2026-09-10 12:49:58.729"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:49:59.437"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:49:59.441"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:49:59.605"}
+{"level":"info","message":"Application APP-34D1281C marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:49:59.739"}
+{"applicationId":"APP-34D1281C","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 16.0s ===","timestamp":"2026-09-10 12:49:59.740"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_session_expiry_02.zip","timestamp":"2026-09-10 12:50:01.489"}
+{"level":"info","message":"✔ Session expiry recovery verified! Total recoveries performed: 1","timestamp":"2026-09-10 12:50:01.700"}
+{"level":"info","message":"✔ Application completed without restarting! Application ID: APP-34D1281C","timestamp":"2026-09-10 12:50:01.700"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:50:01.701"}
+{"level":"info","message":"SCENARIO 3: TRANSIENT FAILURE RETRY (500 ERROR & LATENCY)","timestamp":"2026-09-10 12:50:01.701"}
+{"level":"info","message":"Requirement 5 & 6: Exponential backoff with jitter on transient failures","timestamp":"2026-09-10 12:50:01.702"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:50:01.702"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:50:01.706"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_timeout_03...","timestamp":"2026-09-10 12:50:01.707"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:50:02.631"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:50:05.982"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:50:05.990"}
+{"level":"warn","message":"Operation [Step_EDUCATION] failed on attempt 1/3 (Step transition failed with server message: Simulated HTTP 500 Transient Internal Server Error). Retrying in 1165ms...","timestamp":"2026-09-10 12:50:16.342"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:50:20.153"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:50:20.155"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:50:22.999"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:50:23.004"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:50:25.769"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:50:25.776"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:50:28.528"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:50:28.534"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:50:30.363"}
+{"level":"info","message":"Application APP-C600FE71 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:50:30.536"}
+{"applicationId":"APP-C600FE71","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 28.8s ===","timestamp":"2026-09-10 12:50:30.538"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_timeout_03.zip","timestamp":"2026-09-10 12:50:36.892"}
+{"level":"info","message":"✔ Transient failure overcome via exponential backoff! Application ID: APP-C600FE71","timestamp":"2026-09-10 12:50:37.177"}
+{"level":"info","message":"Step attempts: {\"PERSONAL_INFO\":1,\"EDUCATION\":1,\"EXPERIENCE\":1,\"RESUME_UPLOAD\":1,\"REVIEW\":1,\"SUBMIT\":1}","timestamp":"2026-09-10 12:50:37.177"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:50:37.178"}
+{"level":"info","message":"SCENARIO 4: PROCESS / BROWSER CRASH RECOVERY FROM CHECKPOINT","timestamp":"2026-09-10 12:50:37.178"}
+{"level":"info","message":"Requirement 5 & 7: Browser killed mid-flow, state hydrated, resumes","timestamp":"2026-09-10 12:50:37.178"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:50:37.178"}
+{"level":"info","message":"Phase 1: Starting application and executing steps 1, 2, 3...","timestamp":"2026-09-10 12:50:37.178"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:50:37.180"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:50:38.634"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:50:39.135"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:50:39.508"}
+{"level":"warn","message":"💥 [CHAOS INJECTOR] Simulating unrecoverable browser process kill during Step 4...","timestamp":"2026-09-10 12:50:39.508"}
+{"level":"info","message":"Phase 2: Launching fresh engine instance to simulate worker restart / recovery...","timestamp":"2026-09-10 12:50:39.626"}
+{"completedSteps":["PERSONAL_INFO","EDUCATION","EXPERIENCE"],"currentStep":"RESUME_UPLOAD","level":"info","message":"Loaded existing application checkpoint from disk for candidate cand_crash_04","status":"PENDING","timestamp":"2026-09-10 12:50:39.629"}
+{"level":"info","message":"State recovered from disk checkpoint! Completed steps: PERSONAL_INFO, EDUCATION, EXPERIENCE","timestamp":"2026-09-10 12:50:39.629"}
+{"level":"info","message":"Next pending step to resume: RESUME_UPLOAD","timestamp":"2026-09-10 12:50:39.629"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:50:39.629"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_crash_04...","timestamp":"2026-09-10 12:50:39.630"}
+{"level":"info","message":"Step [PERSONAL_INFO] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:50:40.530"}
+{"level":"info","message":"Step [EDUCATION] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:50:40.530"}
+{"level":"info","message":"Step [EXPERIENCE] already verified as COMPLETED in state checkpoint. Skipping.","timestamp":"2026-09-10 12:50:40.530"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:50:40.533"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Detected expired session during step [RESUME_UPLOAD]. Initiating re-authentication recovery.","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:50:40.604"}
+{"level":"info","message":"Re-authenticating via API login for cand_crash_04@campuspe-candidate.org...","timestamp":"2026-09-10 12:50:40.620"}
+{"level":"info","message":"Session restored. Resuming directly to step [RESUME_UPLOAD] (Step #4) without restarting application.","timestamp":"2026-09-10 12:50:40.715"}
+{"level":"warn","message":"Application state marked RECOVERING on step [RESUME_UPLOAD] due to: Session re-authenticated after expiry","timestamp":"2026-09-10 12:50:40.817"}
+{"isRecovery":true,"level":"warn","message":"RECOVERY ACTION: Successfully recovered session and resumed at step [RESUME_UPLOAD]!","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:50:40.817"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:50:41.231"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:50:41.238"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:50:41.691"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:50:41.703"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:50:41.877"}
+{"level":"info","message":"Application APP-4D23CE77 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:50:42.007"}
+{"applicationId":"APP-4D23CE77","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 2.4s ===","timestamp":"2026-09-10 12:50:42.008"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_crash_04.zip","timestamp":"2026-09-10 12:50:42.623"}
+{"level":"info","message":"✔ Crash recovery successfully completed from checkpoint! Application ID: APP-4D23CE77","timestamp":"2026-09-10 12:50:42.845"}
+{"level":"info","message":"\n================================================================","timestamp":"2026-09-10 12:50:42.846"}
+{"level":"info","message":"SCENARIO 5: IDEMPOTENCY & DUPLICATE SUBMISSION PREVENTION","timestamp":"2026-09-10 12:50:42.846"}
+{"level":"info","message":"Requirement 9: Prevent duplicate submission on already completed applications","timestamp":"2026-09-10 12:50:42.846"}
+{"level":"info","message":"================================================================","timestamp":"2026-09-10 12:50:42.846"}
+{"level":"info","message":"=== Starting Application Flow for [Alex Rivera] ===","timestamp":"2026-09-10 12:50:42.849"}
+{"level":"info","message":"Initializing Playwright Chromium browser for candidate cand_idempotency_05...","timestamp":"2026-09-10 12:50:42.850"}
+{"level":"info","message":"Executing Step #1 [PERSONAL_INFO]","step":"PERSONAL_INFO","timestamp":"2026-09-10 12:50:43.969"}
+{"level":"info","message":"Step [PERSONAL_INFO] marked COMPLETED. Total completed: 1/6","timestamp":"2026-09-10 12:50:44.570"}
+{"level":"info","message":"Executing Step #2 [EDUCATION]","step":"EDUCATION","timestamp":"2026-09-10 12:50:44.577"}
+{"level":"info","message":"Step [EDUCATION] marked COMPLETED. Total completed: 2/6","timestamp":"2026-09-10 12:50:44.976"}
+{"level":"info","message":"Executing Step #3 [EXPERIENCE]","step":"EXPERIENCE","timestamp":"2026-09-10 12:50:44.981"}
+{"level":"info","message":"Step [EXPERIENCE] marked COMPLETED. Total completed: 3/6","timestamp":"2026-09-10 12:50:45.370"}
+{"level":"info","message":"Executing Step #4 [RESUME_UPLOAD]","step":"RESUME_UPLOAD","timestamp":"2026-09-10 12:50:45.379"}
+{"level":"info","message":"Step [RESUME_UPLOAD] marked COMPLETED. Total completed: 4/6","timestamp":"2026-09-10 12:50:45.744"}
+{"level":"info","message":"Executing Step #5 [REVIEW]","step":"REVIEW","timestamp":"2026-09-10 12:50:45.761"}
+{"level":"info","message":"Step [REVIEW] marked COMPLETED. Total completed: 5/6","timestamp":"2026-09-10 12:50:46.272"}
+{"level":"info","message":"Executing Step #6 [SUBMIT]","step":"SUBMIT","timestamp":"2026-09-10 12:50:46.289"}
+{"level":"info","message":"Step [SUBMIT] marked COMPLETED. Total completed: 6/6","timestamp":"2026-09-10 12:50:46.601"}
+{"level":"info","message":"Application APP-62896599 marked SUBMITTED and permanently locked on disk. Duplicate submission prevented.","timestamp":"2026-09-10 12:50:46.726"}
+{"applicationId":"APP-62896599","isDuplicate":false,"level":"info","message":"=== Application Flow COMPLETED Successfully in 3.9s ===","timestamp":"2026-09-10 12:50:46.728"}
+{"level":"info","message":"Playwright execution trace saved to: C:\\Users\\SUBBU\\Downloads\\Project\\CampusPe_assignement\\artifacts\\traces\\trace_cand_idempotency_05.zip","timestamp":"2026-09-10 12:50:47.940"}
+{"level":"info","message":"First submission succeeded with ID: APP-62896599","timestamp":"2026-09-10 12:50:48.178"}
