@@ -9,10 +9,15 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "demo:happy-path": "ts-node scripts/run-demo.ts happy-path",
+    "demo:happy": "ts-node scripts/run-demo.ts happy-path",
     "demo:session-expiry": "ts-node scripts/run-demo.ts session-expiry",
+    "demo:expiry": "ts-node scripts/run-demo.ts session-expiry",
     "demo:network-timeout": "ts-node scripts/run-demo.ts network-timeout",
+    "demo:transient": "ts-node scripts/run-demo.ts network-timeout",
     "demo:browser-crash": "ts-node scripts/run-demo.ts browser-crash",
+    "demo:crash": "ts-node scripts/run-demo.ts browser-crash",
     "demo:duplicate-submission": "ts-node scripts/run-demo.ts duplicate-submission",
+    "demo:idempotency": "ts-node scripts/run-demo.ts duplicate-submission",
     "demo:all": "ts-node scripts/run-demo.ts all"
   },
   "keywords": [
