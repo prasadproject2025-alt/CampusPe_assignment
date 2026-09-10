@@ -18,6 +18,15 @@ async function startServer(): Promise<void> {
       logger.info(`[Demo Runner] Test Server active at http://localhost:${PORT}`);
       resolve();
     });
+    serverInstance.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        logger.info(`[Demo Runner] Reusing existing server at http://localhost:${PORT}`);
+        serverInstance = null;
+        resolve();
+      } else {
+        throw err;
+      }
+    });
   });
 }
 
