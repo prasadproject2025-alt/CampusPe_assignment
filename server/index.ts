@@ -11,10 +11,17 @@ import { chaosMiddleware, chaosState } from './chaos';
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-// Setup upload storage directory
-const uploadDir = path.join(__dirname, '..', 'uploads');
+// Setup upload storage directory (handles local disk vs Vercel /tmp serverless storage)
+const uploadDir = process.env.VERCEL
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '..', 'uploads');
+
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (_e) {
+    // ignore if already created
+  }
 }
 
 const storage = multer.diskStorage({
@@ -35,10 +42,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(chaosMiddleware);
 
-// Serve static frontend UI (supports both ts-node server/ and dist/server/)
+// Serve static frontend UI (supports local dev, dist, and Vercel serverless)
 const publicDir = fs.existsSync(path.join(__dirname, 'public'))
   ? path.join(__dirname, 'public')
-  : path.join(process.cwd(), 'server', 'public');
+  : fs.existsSync(path.join(process.cwd(), 'server', 'public'))
+  ? path.join(process.cwd(), 'server', 'public')
+  : path.join(__dirname, '..', 'server', 'public');
 app.use(express.static(publicDir));
 
 // Helper to extract session token from cookie or header

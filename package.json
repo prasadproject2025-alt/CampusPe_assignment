@@ -18,7 +18,8 @@
     "demo:crash": "ts-node scripts/run-demo.ts browser-crash",
     "demo:duplicate-submission": "ts-node scripts/run-demo.ts duplicate-submission",
     "demo:idempotency": "ts-node scripts/run-demo.ts duplicate-submission",
-    "demo:all": "ts-node scripts/run-demo.ts all"
+    "demo:all": "ts-node scripts/run-demo.ts all",
+    "vercel-build": "tsc"
   },
   "keywords": [
     "playwright",
@@ -47,6 +48,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^22.13.1",
     "@types/uuid": "^10.0.0",
+    "@vercel/node": "^3.2.33",
     "playwright": "^1.50.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
