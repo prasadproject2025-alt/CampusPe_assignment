@@ -207,6 +207,11 @@ export class ApplicationEngine {
           }
 
           this.stateManager.markStepCompleted(step);
+
+          if (this.page) {
+            const stepPic = path.join(this.config.screenshotDir, `ui_${step.toLowerCase()}.png`);
+            await this.page.screenshot({ path: stepPic, fullPage: true }).catch(() => {});
+          }
         } catch (error: any) {
           // Check if session expired caused this error
           const isExpired = await this.sessionManager!.isSessionExpired(stepNumber).catch(() => false);

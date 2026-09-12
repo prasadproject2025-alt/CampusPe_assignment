@@ -197,6 +197,7 @@ async function main() {
     await startServer();
     cleanStateDir();
     resetApplicationState();
+    await fetch(`http://localhost:${PORT}/api/admin/reset`, { method: 'POST' }).catch(() => {});
 
     const results: Record<string, boolean> = {};
 
