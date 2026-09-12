@@ -18,7 +18,14 @@
     "demo:crash": "ts-node scripts/run-demo.ts browser-crash",
     "demo:duplicate-submission": "ts-node scripts/run-demo.ts duplicate-submission",
     "demo:idempotency": "ts-node scripts/run-demo.ts duplicate-submission",
+    "demo:idempotency:headed": "ts-node scripts/run-demo.ts duplicate-submission --headed",
     "demo:all": "ts-node scripts/run-demo.ts all",
+    "demo:headed": "ts-node scripts/run-demo.ts all --headed",
+    "demo:live": "ts-node scripts/run-demo.ts all --headed",
+    "demo:happy:headed": "ts-node scripts/run-demo.ts happy-path --headed",
+    "demo:expiry:headed": "ts-node scripts/run-demo.ts session-expiry --headed",
+    "demo:transient:headed": "ts-node scripts/run-demo.ts network-timeout --headed",
+    "demo:crash:headed": "ts-node scripts/run-demo.ts browser-crash --headed",
     "vercel-build": "tsc"
   },
   "keywords": [

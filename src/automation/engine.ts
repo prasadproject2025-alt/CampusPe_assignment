@@ -52,13 +52,17 @@ export class ApplicationEngine {
     this.idempotencyGuard = new IdempotencyGuard(this.stateManager);
   }
 
-  public async initializeBrowser(headless: boolean = true): Promise<void> {
+  public async initializeBrowser(headless?: boolean): Promise<void> {
     if (!fs.existsSync(this.config.traceDir)) fs.mkdirSync(this.config.traceDir, { recursive: true });
     if (!fs.existsSync(this.config.screenshotDir)) fs.mkdirSync(this.config.screenshotDir, { recursive: true });
 
-    logger.info(`Initializing Playwright Chromium browser for candidate ${this.candidate.candidateId}...`);
+    const isHeadless = headless !== undefined ? headless : (process.env.HEADED !== 'true' && !process.argv.includes('--headed'));
+    const slowMo = isHeadless ? 0 : 600; // 600ms slow motion when headed to clearly watch live actions on screen
+
+    logger.info(`Initializing Playwright Chromium browser (headless: ${isHeadless}) for candidate ${this.candidate.candidateId}...`);
     this.browser = await chromium.launch({
-      headless,
+      headless: isHeadless,
+      slowMo,
       args: ['--disable-dev-shm-usage', '--no-sandbox']
     });
 
