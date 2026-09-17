@@ -214,7 +214,7 @@ export async function submitApplicationWithServerBrowser(
         confirmationTimeoutMs: options.confirmationTimeoutMs,
       })
 
-      if (!result.ok && runId && ['MANUAL_REQUIRED', 'ANSWER_REQUIRES_USER', 'AMBIGUOUS_FIELD', 'FIELD_NOT_FOUND'].includes(result.code)) {
+      if (!result.ok && runId && ['MANUAL_REQUIRED', 'ANSWER_REQUIRES_USER', 'AMBIGUOUS_FIELD', 'FIELD_NOT_FOUND', 'SUBMISSION_FAILED', 'SUBMISSION_TIMEOUT'].includes(result.code)) {
         const { startAssistedSession } = await import('./assistedSession.js')
         await startAssistedSession({ userId, runId, jobUrl, fields, adapter, existingBrowser: { browser, context, page } })
         transferred = true

@@ -50,7 +50,7 @@ const STEALTH_INIT_SCRIPT = `(() => {
       delete Navigator.prototype.webdriver;
     }
     Object.defineProperty(navigator, 'webdriver', {
-      get: markNative(() => undefined, 'get webdriver'),
+      get: markNative(() => false, 'get webdriver'),
       configurable: true,
       enumerable: true,
     });
@@ -260,10 +260,11 @@ export async function launchHeadlessAutomationBrowser(): Promise<{ browser: Brow
   if (testLauncher) return testLauncher()
   let browser: Browser | undefined
   try {
+    const isHeadless = process.env.HEADLESS_BROWSER !== 'false'
     // Chrome gets Playwright's temporary profile; never attach to the user's session.
     browser = await chromium.launch({
       channel: 'chrome',
-      headless: true,
+      headless: isHeadless,
       args: [
         `--window-size=${automationViewport.width},${automationViewport.height}`,
         '--disable-blink-features=AutomationControlled',
@@ -273,6 +274,10 @@ export async function launchHeadlessAutomationBrowser(): Promise<{ browser: Brow
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
         '--disable-ipc-flooding-protection',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--no-default-browser-check',
+        '--no-first-run',
         '--lang=en-US,en',
         '--accept-lang=en-US,en;q=0.9',
       ],

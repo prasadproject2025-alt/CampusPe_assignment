@@ -4,7 +4,8 @@ import type { AdapterQuestion, Blocker, EducationRecord, ResumeUpload } from '..
 import { extractQuestionsFromPage } from '../../application/extraction/domExtractor.js'
 import { fillLiveAnswer, resolveLiveControl } from '../../application/extraction/liveResolver.js'
 import { ashbySelectors } from './selectors.js'
-import { bezierMouseMove, humanPause, naturalScroll, preSubmitReview, randomInt } from '../../application/stealthHelpers.js'
+import { bezierMouseMove, humanPause, naturalScroll, preSubmitReview, randomInt, waitForAntiBotReady } from '../../application/stealthHelpers.js'
+import { isCapSolverConfigured, solveCaptchaOnPage } from '../../application/capsolverService.js'
 
 export function ashbyChoiceMatches(label: string, desired: string) {
   if (label === desired) return true
@@ -110,6 +111,12 @@ export class AshbyApplicationPage {
     // --- Pre-submit review: simulate user reading through the form ----------
     await preSubmitReview(this.page)
 
+    // --- Wait for anti-bot / Cloudflare Turnstile token readiness -----------
+    const antiBotReady = await waitForAntiBotReady(this.page, 8_000)
+    if (!antiBotReady && isCapSolverConfigured()) {
+      await solveCaptchaOnPage(this.page).catch(() => undefined)
+    }
+
     // --- Scroll to submit button naturally -----------------------------------
     await button.scrollIntoViewIfNeeded()
     await humanPause(this.page, 500, 1000)
@@ -140,7 +147,7 @@ export class AshbyApplicationPage {
 
     // --- Hover and pause (simulate reading the button label) ----------------
     await button.hover().catch(() => undefined)
-    await humanPause(this.page, 400, 900)
+    await humanPause(this.page, 500, 1000)
 
     // --- Click with natural timing ------------------------------------------
     await button.click({ timeout: 10_000 }).catch(async () => {
@@ -148,6 +155,7 @@ export class AshbyApplicationPage {
       await button.click({ force: true })
     })
   }
+
 
   private random(minimum: number, maximum: number) { return Math.floor(Math.random() * (maximum - minimum + 1)) + minimum }
   private async pause(minimum: number, maximum: number) { await this.page.waitForTimeout(this.random(minimum, maximum)) }

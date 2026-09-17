@@ -275,3 +275,47 @@ export async function approachField(page: Page, fieldLocator: import('playwright
     await humanPause(page, 200, 600)
   }
 }
+
+/**
+ * Wait for Cloudflare Turnstile, reCAPTCHA, or hCaptcha tokens to resolve
+ * while generating subtle mouse interaction events to satisfy anti-bot telemetry.
+ */
+export async function waitForAntiBotReady(page: Page, maxWaitMs = 10_000): Promise<boolean> {
+  const start = Date.now()
+  const vp = page.viewportSize() ?? { width: 1280, height: 800 }
+
+  while (Date.now() - start < maxWaitMs) {
+    const status = await page.evaluate(() => {
+      const cfInput = document.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null
+      const gInput = document.querySelector('[name="g-recaptcha-response"], #g-recaptcha-response') as HTMLInputElement | null
+      const hInput = document.querySelector('[name="h-captcha-response"]') as HTMLInputElement | null
+
+      const cfHasVal = Boolean(cfInput && cfInput.value && cfInput.value.trim().length > 10)
+      const gHasVal = Boolean(gInput && gInput.value && gInput.value.trim().length > 10)
+      const hHasVal = Boolean(hInput && hInput.value && hInput.value.trim().length > 10)
+
+      const hasTurnstile = Boolean(document.querySelector('.cf-turnstile, iframe[src*="challenges.cloudflare.com"], [data-turnstile-sitekey]'))
+      const hasRecaptcha = Boolean(document.querySelector('iframe[src*="recaptcha"]'))
+      const hasHcaptcha = Boolean(document.querySelector('iframe[src*="hcaptcha"], .h-captcha'))
+
+      if (hasTurnstile && !cfHasVal) return { ready: false, pending: 'turnstile' }
+      if (hasHcaptcha && !hHasVal && !cfHasVal) return { ready: false, pending: 'hcaptcha' }
+      if (hasRecaptcha && !gHasVal && !cfHasVal && !hHasVal) return { ready: false, pending: 'recaptcha' }
+
+      return { ready: true }
+    }).catch(() => ({ ready: true }))
+
+    if (status.ready) {
+      return true
+    }
+
+    // Move cursor with slight human jitter while waiting for Turnstile/Captcha background worker
+    const targetX = randomInt(Math.round(vp.width * 0.2), Math.round(vp.width * 0.8))
+    const targetY = randomInt(Math.round(vp.height * 0.3), Math.round(vp.height * 0.7))
+    await bezierMouseMove(page, targetX, targetY, { steps: randomInt(8, 16) }).catch(() => undefined)
+    await page.waitForTimeout(randomInt(300, 600))
+  }
+
+  return false
+}
+
