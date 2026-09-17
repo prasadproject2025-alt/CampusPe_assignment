@@ -22,23 +22,34 @@ export function submissionFailureCode(run: AutomationRun | null) {
   return known.find((code) => run.error?.startsWith(`${code}:`) || run.error === code) || null
 }
 
+export function isEmployerSpamRejection(error?: string | null) {
+  return /possible spam|flagged this submission as possible spam|submission was flagged/i.test(error || '')
+}
+
+export function applicationState(run: AutomationRun | null) {
+  if (!run) return 'PREPARING'
+  if (run.status === 'SUBMITTED') return 'SUBMITTED'
+  if (run.status === 'FAILED' || ['SUBMISSION_TIMEOUT', 'SUBMISSION_FAILED'].includes(submissionFailureCode(run) || '')) return 'FAILED'
+  if (run.error) return 'USER_ACTION_REQUIRED'
+  const assisted = run.assistedSession?.status
+  if (assisted === 'FAILED' || assisted === 'EXPIRED' || assisted === 'CANCELLED') return 'FAILED'
+  if (assisted === 'VERIFYING' || run.currentStep.includes('VERIFYING')) return 'VERIFYING'
+  if (assisted === 'SUBMITTING' || run.status === 'SUBMITTING') return 'SUBMITTING'
+  if (assisted === 'USER_REVIEWING') return 'REVIEW'
+  if (assisted === 'MANUAL_REQUIRED' || assisted === 'WAITING_FOR_USER' || run.status.startsWith('PAUSED_')) return 'USER_ACTION_REQUIRED'
+  if (run.status === 'READY_FOR_REVIEW') return 'REVIEW'
+  if (assisted === 'FILLING' || run.status === 'FILLING_APPLICATION') return 'FILLING'
+  return 'PREPARING'
+}
+
 export function liveStatusLabel(run: AutomationRun | null) {
   if (!run) return 'Idle'
-  if (run.assistedSession) {
-    const assisted = assistedStatusLabel(run.assistedSession.status)
-    if (assisted) return assisted
+  const labels = {
+    PREPARING: 'Preparing application', FILLING: 'Filling application', REVIEW: 'Ready for review',
+    USER_ACTION_REQUIRED: 'Manual action required', SUBMITTING: 'Submitting', VERIFYING: 'Verifying submission',
+    SUBMITTED: 'Application submitted', FAILED: 'Submission failed',
   }
-  const failure = submissionFailureCode(run)
-  if (failure && run.status !== 'SUBMITTED') return failure
-  if (run.status === 'QUEUED' || run.status === 'OPENING_JOB' || run.status === 'EXTRACTING_JOB' || run.status === 'FILLING_APPLICATION') {
-    return run.application?.fields?.length ? 'Application form' : 'Loading application...'
-  }
-  if (run.status.startsWith('PAUSED_')) return 'Needs user input'
-  if (run.status === 'READY_FOR_REVIEW') return 'Ready for review'
-  if (run.status === 'SUBMITTING') return 'Submission pending'
-  if (run.status === 'SUBMITTED') return 'Submitted successfully'
-  if (run.status === 'FAILED') return run.error?.toLowerCase().includes('not supported') ? 'Unsupported application' : 'Submission failed'
-  return run.status.replaceAll('_', ' ')
+  return labels[applicationState(run)]
 }
 
 export function liveStatusDetail(run: AutomationRun | null) {
@@ -46,6 +57,9 @@ export function liveStatusDetail(run: AutomationRun | null) {
   const strategy = runStrategy(run)
   const count = run.application?.fields?.length || 0
   const failure = submissionFailureCode(run)
+  if (isEmployerSpamRejection(run.error || run.pause?.reason)) {
+    return 'The employer rejected this submission as possible spam. It did not disclose the cause. This run will not be retried automatically.'
+  }
   if (run.status === 'FAILED') return run.error || 'This application could not be opened inside JobCopilot.'
   if (run.status === 'SUBMITTED') return 'The job board confirmed your application was received.'
   if (run.status === 'SUBMITTING') return 'Sending reviewed answers from the server. Chrome stays off your machine.'
@@ -56,7 +70,7 @@ export function liveStatusDetail(run: AutomationRun | null) {
   }
   if (run.status.startsWith('PAUSED_')) return run.pause?.instruction || 'Complete the highlighted field, then continue on the right.'
   if (run.assistedSession?.status === 'MANUAL_REQUIRED') return run.assistedSession.reason
-  if (strategy === 'EMBED') return 'Official employer embed. This iframe is cross-origin, so JobCopilot cannot autofill or auto-submit it.'
+  if (strategy === 'EMBED') return 'Application embeds are disabled. Continue in the assisted browser.'
   if (strategy === 'MANUAL_REQUIRED') return run.pause?.reason || 'This application needs a step JobCopilot cannot complete automatically.'
   if (count) return `${count} fields found. Review and complete your application before submitting.`
   return 'Extracting the application form…'

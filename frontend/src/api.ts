@@ -12,7 +12,7 @@ export type StoredProfile = {
 
 export type RecommendedJob = {
   id: string; source: 'ashby' | 'greenhouse' | 'lever' | 'workable'; company: string; title: string; location: string; workplaceType: string; employmentType: string
-  salary: string | null; department: string | null; skills: string[]; publishedAt: string | null; jobUrl: string; applyUrl: string
+  countryCode?: 'IN' | null; salary: string | null; department: string | null; skills: string[]; publishedAt: string | null; jobUrl: string; applyUrl: string
 }
 
 type ApiErrorBody = { error?: { message?: string; code?: string } }

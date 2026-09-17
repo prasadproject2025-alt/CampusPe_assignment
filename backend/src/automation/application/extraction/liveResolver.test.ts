@@ -2,7 +2,15 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { launchHeadlessAutomationBrowser, runWithBrowserPermit } from '../../browserLauncher.js'
 import { extractQuestionsFromPage } from './domExtractor.js'
-import { fillLiveAnswer, resolveLiveField } from './liveResolver.js'
+import { fillLiveAnswer, locationSearchQueries, resolveLiveField } from './liveResolver.js'
+
+test('location search queries prefer the full value then the city', () => {
+  assert.deepEqual(locationSearchQueries('Mumbai, Maharashtra, India'), [
+    'Mumbai, Maharashtra, India',
+    'Mumbai',
+    'Mumbai, India',
+  ])
+})
 
 const leverPronounsHtml = `<!doctype html><html><body>
 <form id="application-form">
@@ -448,3 +456,62 @@ test('Lever location without a unique suggestion is ANSWER_REQUIRES_USER', async
   }
 })
 
+const ashbyLocationComboHtml = `<!doctype html><html><body>
+<form>
+  <label for="location">Location</label>
+  <input id="location" name="location" role="combobox" />
+  <ul id="location-options" role="listbox" hidden>
+    <li role="option">Mumbai, Maharashtra, India</li>
+    <li role="option">Mumbai, Florida, United States</li>
+  </ul>
+</form>
+<script>
+const input = document.getElementById('location');
+const list = document.getElementById('location-options');
+input.addEventListener('input', function () {
+  const query = input.value.trim().toLowerCase();
+  list.hidden = !query;
+  for (const option of list.querySelectorAll('[role="option"]')) {
+    option.hidden = !option.textContent.toLowerCase().includes(query);
+  }
+});
+for (const option of list.querySelectorAll('[role="option"]')) {
+  option.addEventListener('click', function () {
+    input.value = option.textContent.trim();
+    list.hidden = true;
+  });
+}
+</script>
+</body></html>`
+
+test('Ashby-style location combobox picks a unique typed suggestion', async (t) => {
+  let launched: Awaited<ReturnType<typeof launchHeadlessAutomationBrowser>>
+  try {
+    launched = await runWithBrowserPermit('test', () => launchHeadlessAutomationBrowser())
+  } catch (error) {
+    t.skip(`Headless shell is not available here: ${error instanceof Error ? error.message : error}`)
+    return
+  }
+  const { browser, context } = launched
+  try {
+    const page = await context.newPage()
+    await page.setContent(ashbyLocationComboHtml)
+    const questions = await extractQuestionsFromPage(page)
+    const location = questions.find((question) => /location/i.test(question.text))
+    assert.ok(location)
+    await fillLiveAnswer(page, { ...location!, text: 'Location', locator: { kind: 'field', value: 'label:Location' }, inputType: 'select' }, 'Mumbai, Maharashtra, India')
+    assert.match(await page.locator('#location').inputValue(), /Mumbai, Maharashtra, India/i)
+  } finally {
+    await context.close().catch(() => undefined)
+    await browser.close().catch(() => undefined)
+  }
+})
+
+
+test('location matching accepts Indian city aliases but rejects conflicting regions', async () => {
+  const { locationOptionMatches } = await import('./liveResolver.js')
+  assert.equal(locationOptionMatches('Bengaluru, Karnataka, India', 'Bangalore, Karnataka, India'), true)
+  assert.equal(locationOptionMatches('Mumbai, Maharashtra, India', 'Mumbai, India'), true)
+  assert.equal(locationOptionMatches('Pune, United States', 'Pune, India'), false)
+  assert.equal(locationOptionMatches('Navi Mumbai, Maharashtra, India', 'Mumbai, India'), false)
+})

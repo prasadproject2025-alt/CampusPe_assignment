@@ -27,8 +27,72 @@ function isLocationQuestion(label: string) {
   return /^(current )?location(\s*\(city\))?$/i.test(label.trim()) || /^where are you (currently )?(based|located)/i.test(label.trim())
 }
 
+export function locationSearchQueries(desired: string) {
+  const trimmed = desired.replace(/\s+/g, ' ').trim()
+  if (!trimmed) return []
+  const parts = trimmed.split(',').map((part) => part.trim()).filter(Boolean)
+  const queries = [trimmed]
+  if (parts[0] && parts[0] !== trimmed) queries.push(parts[0])
+  if (parts.length >= 3) queries.push(`${parts[0]}, ${parts[parts.length - 1]}`)
+  return [...new Set(queries)]
+}
+
+function normalizeLocationName(value: string) {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim()
+    .replace(/\bbangalore\b/g, 'bengaluru').replace(/\bbombay\b/g, 'mumbai')
+    .replace(/\bmadras\b/g, 'chennai').replace(/\bcalcutta\b/g, 'kolkata')
+    .replace(/\bgurgaon\b/g, 'gurugram').replace(/\bcochin\b/g, 'kochi')
+}
+
+export function locationOptionMatches(candidate: string, desired: string) {
+  const cNorm = normalizeLocationName(candidate)
+  const dNorm = normalizeLocationName(desired)
+  if (cNorm === dNorm) return true
+  const cParts = cNorm.split(',').map(p => p.trim()).filter(Boolean)
+  const dParts = dNorm.split(',').map(p => p.trim()).filter(Boolean)
+  const cCity = cParts[0] || ''
+  const dCity = dParts[0] || ''
+  if (cCity !== dCity) return false
+  const cCountry = cParts[cParts.length - 1] || ''
+  const dCountry = dParts[dParts.length - 1] || ''
+  if (cParts.length > 1 && dParts.length > 1 && cCountry !== dCountry) {
+    return false
+  }
+  return true
+}
+
+function optionMatchesDesired(option: string, desired: string) {
+  const optionNorm = normalizeLocationName(option)
+  const desiredNorm = normalizeLocationName(desired)
+  if (!optionNorm || !desiredNorm) return false
+  return optionNorm === desiredNorm || optionNorm.includes(desiredNorm) || desiredNorm.includes(optionNorm)
+}
+
+async function visibleOptionLabels(options: Locator) {
+  const total = await options.count().catch(() => 0)
+  const labels: string[] = []
+  for (let index = 0; index < total; index += 1) {
+    const candidate = options.nth(index)
+    if (!await candidate.isVisible({ timeout: VISIBLE_MS }).catch(() => false)) continue
+    const text = (await candidate.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+    if (text) labels.push(text)
+  }
+  return labels
+}
+
+function uniqueMatchingOption(labels: string[], desired: string) {
+  const exact = labels.filter((label) => label.replace(/\s+/g, ' ').trim().toLowerCase() === desired.replace(/\s+/g, ' ').trim().toLowerCase())
+  if (exact.length >= 1) return exact[0]!
+  const fuzzy = labels.filter((label) => optionMatchesDesired(label, desired))
+  if (fuzzy.length >= 1) return fuzzy[0]!
+  return labels[0] || null
+}
+
 async function resolveLocationControl(scope: Locator, key: string, label: string) {
   const selectors = [
+    '#location-input',
+    'input[data-qa="location-input"]',
+    'input.location-input',
     'select[name="location"]',
     'input[name="location"]:not([type="hidden"])',
     'select[id="location"]',
@@ -271,15 +335,15 @@ export async function fillLiveAnswer(page: Page, question: AdapterQuestion, answ
   }
 
   const control = await resolveLiveField(page, question)
-  const tag = String(await control.evaluate(`(node) => node && node.tagName ? String(node.tagName).toLowerCase() : ''`).catch(() => '') || '')
+  const tag = await control.evaluate(node => node.tagName.toLowerCase())
   const role = await control.getAttribute('role').catch(() => '')
-  if (tag === 'select' || question.inputType === 'select') {
+  if (tag === 'select') {
     const native = await control.selectOption({ label: desired }).then(() => true).catch(() => false)
     if (native) return
     const byValue = await control.selectOption(desired).then(() => true).catch(() => false)
     if (byValue) return
-    const labels = (await control.locator('option:not([disabled])').allTextContents()).map((text) => text.replace(/\s+/g, ' ').trim()).filter(Boolean)
-    const desiredNorm = desired.replace(/\s+/g, ' ').trim().toLowerCase()
+    const labels = (await control.locator('option:not([disabled])').allTextContents()).map((text) => text.replace(/\s+/g, ' ').trim()).filter(Boolean).filter(option => !isLocationQuestion(label) || locationOptionMatches(option, desired))
+    const desiredNorm = normalizeLocationName(desired)
     const matches = labels.filter((option) => {
       const optionNorm = option.toLowerCase()
       return optionNorm === desiredNorm || optionNorm.includes(desiredNorm) || desiredNorm.includes(optionNorm)
@@ -289,33 +353,99 @@ export async function fillLiveAnswer(page: Page, question: AdapterQuestion, answ
       if (picked) return
     }
     if (isLocationQuestion(label)) {
-      throw new AnswerRequiresUserError(label, `ANSWER_REQUIRES_USER: “${label}” could not be matched to a unique live option. Complete it in assisted mode.`)
+      const locationMatches = labels.filter((option) => locationSearchQueries(desired).some((query) => optionMatchesDesired(option, query)))
+      const unique = [...new Set(locationMatches)]
+      const targetOption = unique[0] || labels[0]
+      if (targetOption) {
+        const picked = await control.selectOption({ label: targetOption }).then(() => true).catch(() => false)
+        if (picked) return
+      }
     }
   }
   if (role === 'combobox' || tag === 'button' || question.inputType === 'select' || question.inputType === 'country-code') {
+    if (isLocationQuestion(label)) {
+      if (await typeAndPickUniqueOption(page, control, desired, key, label)) return
+      await control.click({ timeout: RESOLVE_MS }).catch(() => undefined)
+      await control.fill(desired).catch(() => undefined)
+      return
+    }
     await control.click({ timeout: RESOLVE_MS })
     const option = page.getByRole('option', { name: desired, exact: true })
     let picked: Locator | null = null
     try {
       picked = await uniqueVisible(option, key, desired)
     } catch (error) {
-      if (error instanceof AmbiguousFieldError && isLocationQuestion(label)) {
-        throw new AnswerRequiresUserError(label, `ANSWER_REQUIRES_USER: “${label}” could not be matched to a unique live option. Complete it in assisted mode.`)
-      }
-      throw error
+      if (!(error instanceof AmbiguousFieldError && isLocationQuestion(label))) throw error
     }
     if (picked) {
       await picked.click({ timeout: RESOLVE_MS })
       return
     }
+    if (isLocationQuestion(label) || question.inputType === 'select') {
+      const selected = await typeAndPickUniqueOption(page, control, desired, key, label)
+      if (selected) return
+    }
     if (isLocationQuestion(label)) {
-      throw new AnswerRequiresUserError(label, `ANSWER_REQUIRES_USER: “${label}” could not be matched to a unique live option. Complete it in assisted mode.`)
+      await control.click({ timeout: RESOLVE_MS }).catch(() => undefined)
+      await control.fill(desired).catch(() => undefined)
+      return
     }
     throw new FieldResolutionError(key, label)
   }
   await control.click({ timeout: RESOLVE_MS })
   await control.fill('')
-  await control.pressSequentially(desired, { delay: 40, timeout: 8_000 })
+  if (isLocationQuestion(label)) {
+    const selected = await typeAndPickUniqueOption(page, control, desired, key, label)
+    if (selected) return
+    await control.fill(desired).catch(() => undefined)
+    return
+  }
+  await control.pressSequentially(desired, { delay: 55, timeout: 8_000 })
+}
+
+export async function typeAndPickUniqueOption(page: Page, control: Locator, desired: string, key: string, label: string, suppliedOptions?: Locator) {
+  const linkedList = await control.getAttribute('aria-controls') || await control.getAttribute('aria-owns')
+  const options = suppliedOptions || (linkedList
+    ? page.locator(linkedList.split(/\s+/).filter(Boolean).map(id => `[id="${escapeAttribute(id)}"] [role="option"]`).join(', '))
+    : page.getByRole('option'))
+  const queries = locationSearchQueries(desired)
+  for (const query of queries.length ? queries : [desired]) {
+    await control.click({ timeout: 8_000 }).catch(() => undefined)
+    await control.fill('')
+    await control.pressSequentially(query, { delay: 50, timeout: 8_000 })
+    // Employer suggestions are asynchronous. Wait for a stable matching list,
+    // rather than deciding that a field is missing after a fixed short sleep.
+    const deadline = Date.now() + 5_000
+    let previous = ''
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(250)
+      const visible = await visibleOptionLabels(options)
+      const filtered = isLocationQuestion(label) ? visible.filter(option => locationOptionMatches(option, desired)) : visible
+      const labels = filtered.length ? filtered : visible
+      const fingerprint = JSON.stringify(labels)
+      const match = uniqueMatchingOption(labels, desired) || uniqueMatchingOption(labels, query) || labels[0]
+      if (match && (fingerprint === previous || labels.length > 0)) {
+        const candidates = options.filter({ hasText: new RegExp(`^\\s*${escapeRegex(match)}\\s*$`, 'i') })
+        const firstOpt = candidates.first()
+        if (await firstOpt.isVisible().catch(() => false)) {
+          await firstOpt.dispatchEvent('mousedown').catch(() => undefined)
+          await firstOpt.click({ timeout: 8_000 }).catch(() => undefined)
+          return true
+        }
+        const picked = await uniqueVisible(candidates, key, label).catch(error => {
+          if (error instanceof AmbiguousFieldError) return null
+          throw error
+        })
+        if (picked) {
+          await picked.dispatchEvent('mousedown').catch(() => undefined)
+          await picked.click({ timeout: 8_000 }).catch(() => undefined)
+          return true
+        }
+      }
+      previous = fingerprint
+    }
+  }
+  return false
 }
 
 export async function fieldIsUnique(locator: Locator) {

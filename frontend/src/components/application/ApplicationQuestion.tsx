@@ -33,7 +33,7 @@ export function ApplicationQuestion({
   const userRequired = field.status === 'unresolved'
   const llm = field.source === 'L3_LLM'
   return (
-    <label className={`application-field ${highlighted ? 'needs-input' : ''} ${field.status}`}>
+    <div role="group" aria-label={field.text} className={`application-field ${highlighted ? 'needs-input' : ''} ${field.status}`}>
       <span>
         <b>{field.text}{field.required ? ' *' : ''}</b>
         {field.description && <small>{field.description}</small>}
@@ -58,6 +58,6 @@ export function ApplicationQuestion({
           <button type="button" onClick={onReject}><X /> Reject</button>
         </div>
       )}
-    </label>
+    </div>
   )
 }

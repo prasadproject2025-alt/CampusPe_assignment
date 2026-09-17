@@ -1,12 +1,12 @@
-import { useRef, type ReactNode } from 'react'
-import { ArrowRight, Pause, Send, ShieldCheck, MonitorPlay, X } from 'lucide-react'
+import { type ReactNode } from 'react'
+import { ArrowRight, Pause, ShieldCheck, MonitorPlay, X } from 'lucide-react'
 import { ApplicationForm } from './ApplicationForm'
 import { ApplicationLoading, ApplicationEmpty } from './ApplicationLoading'
 import { ApplicationReview } from './ApplicationReview'
 import { ApplicationStatus } from './ApplicationStatus'
 import { BrowserApplicationPreview } from './BrowserApplicationPreview'
 import { EmbeddedApplication } from './EmbeddedApplication'
-import { assistedStatusLabel, liveStatusDetail, liveStatusLabel, strategyHeadline, submissionFailureCode } from './statusCopy'
+import { assistedStatusLabel, isEmployerSpamRejection, liveStatusDetail, liveStatusLabel, strategyHeadline, submissionFailureCode } from './statusCopy'
 import type { AutomationRun } from './types'
 import { runStrategy } from './types'
 
@@ -24,32 +24,24 @@ export function LiveApplication({
   loading,
   onContinue,
   onPause,
-  onSubmit,
   onUpdateAnswers,
   onAssisted,
   onCancelAssisted,
+  onSubmitAssisted,
+  onSubmit,
 }: {
   run: AutomationRun | null
   loading: boolean
   onContinue: () => void
   onPause: () => void
-  onSubmit: () => void
   onUpdateAnswers: (fields: Array<{ id: string; value: string }>) => void
   onAssisted: () => void
   onCancelAssisted: () => void
+  onSubmitAssisted: () => void
+  onSubmit?: () => void
 }) {
   const strategy = runStrategy(run)
-  const pending = useRef(new Map<string, string>())
-  const flushTimer = useRef(0)
-  const queueAnswers = (fields: Array<{ id: string; value: string }>) => {
-    for (const field of fields) pending.current.set(field.id, field.value)
-    window.clearTimeout(flushTimer.current)
-    flushTimer.current = window.setTimeout(() => {
-      const payload = [...pending.current.entries()].map(([id, value]) => ({ id, value }))
-      pending.current.clear()
-      if (payload.length) onUpdateAnswers(payload)
-    }, 350)
-  }
+  const queueAnswers = onUpdateAnswers
 
   const assisted = run?.assistedSession
   const assistedActive = Boolean(assisted && !['SUBMITTED', 'FAILED', 'EXPIRED', 'CANCELLED'].includes(assisted.status))
@@ -66,8 +58,9 @@ export function LiveApplication({
   const requiredCount = run?.application?.fields?.filter((field) => field.required).length || 0
   const loadingForm = Boolean(run && ['QUEUED', 'OPENING_JOB', 'EXTRACTING_JOB', 'FILLING_APPLICATION'].includes(run.status) && !fieldCount && !assistedActive)
   const stats = run ? readiness(run) : null
-  const canStartAssisted = Boolean(run && !run.testMode && !assistedActive && ['READY_FOR_REVIEW', 'PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA'].includes(run.status))
-  const showReady = Boolean(run?.status === 'READY_FOR_REVIEW' && !assistedActive && !failureCode)
+  const canStartAssisted = Boolean(run && !run.testMode && !assistedActive && !isEmployerSpamRejection(run.error || run.pause?.reason) && ['READY_FOR_REVIEW', 'PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA'].includes(run.status))
+  const showReady = Boolean(run?.status === 'READY_FOR_REVIEW' && !assistedActive && !failureCode && !run.error)
+  const spamBlocked = isEmployerSpamRejection(run?.error || run?.pause?.reason)
 
   let body: ReactNode
   if (!run) body = <ApplicationEmpty />
@@ -145,13 +138,12 @@ export function LiveApplication({
             {failureCode && !assistedActive && !manualRequired && (
               <div className="automation-pause assisted-manual">
                 <strong>{failureCode}</strong>
-                <p>{run?.error || run?.pause?.reason}</p>
-                <small>{run?.pause?.instruction || 'Backend status is the source of truth. JobCopilot will not invent an answer or claim success without ATS confirmation.'}</small>
+                <p>{spamBlocked ? 'The employer rejected this submission as possible spam. Automatic retries are disabled.' : run?.error || run?.pause?.reason}</p>
+                <small>{spamBlocked
+                  ? 'No successful submission was confirmed. The employer did not disclose why it rejected the application. Check the employer’s application guidance before taking further action.'
+                  : (run?.pause?.instruction || 'Backend status is the source of truth. JobCopilot will not invent an answer or claim success without ATS confirmation.')}</small>
                 {canStartAssisted && (
                   <button className="button primary" disabled={loading} onClick={onAssisted}><MonitorPlay /> Continue in assisted browser</button>
-                )}
-                {strategy !== 'EMBED' && !run?.testMode && failureCode !== 'MANUAL_REQUIRED' && (
-                  <button className="button secondary automation-submit-button" disabled={loading} onClick={onSubmit}>{loading ? 'Submitting…' : 'Retry submit'} <Send /></button>
                 )}
               </div>
             )}
@@ -159,13 +151,17 @@ export function LiveApplication({
               <div className="automation-ready">
                 <ShieldCheck />
                 <div>
-                  <strong>Ready for review</strong>
-                  <ApplicationReview message={run.testMode ? 'Testing mode never submits.' : 'Review every answer, then submit automatically or continue in the assisted browser.'} />
+                  <strong>Ready for submission</strong>
+                  <ApplicationReview message={run.testMode ? 'Testing mode never submits.' : 'Your answers are filled and verified. Submit automatically or review the live form in the assisted browser.'} />
                   {strategy !== 'EMBED' && !run.testMode && (
-                    <>
-                      <button className="button primary automation-submit-button" disabled={loading} onClick={onSubmit}>{loading ? 'Submitting…' : 'Submit application'} <Send /></button>
-                      <button className="button secondary assisted-browser-button" disabled={loading} onClick={onAssisted}><MonitorPlay /> Continue in assisted browser</button>
-                    </>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                      <button className="button primary full" disabled={loading} onClick={onSubmit}>
+                        {loading ? 'Submitting…' : 'Submit Application'} <ArrowRight size={16} />
+                      </button>
+                      <button className="button secondary assisted-browser-button full" disabled={loading} onClick={onAssisted}>
+                        <MonitorPlay size={16} /> Review in assisted browser
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -176,6 +172,7 @@ export function LiveApplication({
                 <div>
                   <strong>{assistedStatusLabel(assisted?.status)}</strong>
                   <p>{assisted?.reason}</p>
+                  {['WAITING_FOR_USER', 'USER_REVIEWING', 'MANUAL_REQUIRED'].includes(assisted?.status || '') && !/SUBMISSION_TIMEOUT/.test(assisted?.reason || '') && <button className="button primary" disabled={loading} onClick={onSubmitAssisted}>{loading ? 'Checking form…' : 'Submit application'}</button>}
                   <button className="button secondary" disabled={loading} onClick={onCancelAssisted}><X /> Cancel session</button>
                 </div>
               </div>

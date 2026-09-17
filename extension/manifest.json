@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "CampusPe Auto Apply Assistant",
+  "version": "1.0.0",
+  "description": "In-browser autofill and submission assistant for job applications",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "CampusPe Auto Apply"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://jobs.ashbyhq.com/*",
+        "https://boards.greenhouse.io/*",
+        "https://jobs.lever.co/*"
+      ],
+      "js": ["contentScript.js"]
+    }
+  ]
+}

@@ -49,10 +49,10 @@ function LocationFields({ value, onChange, includePostalCode = true }: { value: 
   </>
 }
 
-function PhoneCountryField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+export function PhoneCountryField({ value, onChange, disabled = false }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const [countries, setCountries] = useState<LocationOption[]>([])
   useEffect(() => { countriesPromise ??= loadOptions('/api/locations/countries'); void countriesPromise.then(setCountries) }, [])
-  return <Field label="Phone country code"><select value={value} disabled={!countries.length} onChange={(event) => onChange(event.target.value)} autoComplete="tel-country-code"><option value="">{countries.length ? 'Select phone country' : 'Loading countries…'}</option>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}{country.dialCode ? ` (${country.dialCode})` : ''}</option>)}</select></Field>
+  return <Field label="Phone country code"><select value={value} disabled={disabled || !countries.length} onChange={(event) => onChange(event.target.value)} autoComplete="tel-country-code"><option value="">{countries.length ? 'Select phone country' : 'Loading countries…'}</option>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}{country.dialCode ? ` (${country.dialCode})` : ''}</option>)}</select></Field>
 }
 
 export function ProfilePage({ onHome, onComplete, profile: user }: Props) {
@@ -109,7 +109,7 @@ export function ProfilePage({ onHome, onComplete, profile: user }: Props) {
       <form className="profile-content" onSubmit={saveProfile}>
         <div className="profile-title"><div><p className="eyebrow">Application profile</p><h1>Set up your reusable answers</h1><p>These details are saved locally in SQLite. You’ll always review them before submission.</p></div><button className="button primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save profile'}</button></div>
         {error && <p className="profile-error" role="alert">{error}</p>}
-        <section className="profile-card" id="resume"><div className="card-heading"><span className="card-icon"><FileCheck2 /></span><div><h2>Resume</h2><p>Your default resume for job applications.</p></div></div>
+        <section className="profile-card" id="resume"><div className="card-heading"><span className="card-icon"><FileCheck2 /></span><div><h2>Resume</h2><p>Ollama reads this file to fill empty profile fields and draft application answers. Saved values are never overwritten. Legal, salary, and demographic answers stay blank unless they are already saved or explicitly written on the resume.</p></div></div>
           <label className={`upload-zone ${resumeFile || data.resume ? 'has-file' : ''}`}><input type="file" accept=".pdf,.doc,.docx" onChange={(event) => setResumeFile(event.target.files?.[0] ?? null)} /><span className="upload-icon">{resumeFile || data.resume ? <FileCheck2 /> : <UploadCloud />}</span><span><strong>{resumeFile?.name || data.resume?.filename || 'Upload your resume'}</strong><small>{resumeFile ? 'Will upload when you save' : data.resume ? 'Saved locally and ready to use' : 'PDF, DOC, or DOCX · maximum 10 MB'}</small></span><span className="button secondary upload-button">{resumeFile || data.resume ? 'Replace' : 'Choose file'}</span></label>
         </section>
         <section className="profile-card" id="personal"><div className="card-heading"><span className="card-icon"><UserRound /></span><div><h2>Personal details</h2><p>Basic information commonly requested by employers.</p></div></div><div className="form-grid">

@@ -18,7 +18,7 @@ export class WorkableApplicationPage {
   async readQuestions(): Promise<AdapterQuestion[]> {
     const questions = await extractQuestionsFromPage(this.page)
     const countryButton = this.page.locator(workableSelectors.phoneCountryButton)
-    if (await countryButton.count() && !questions.some((question) => /phone country/i.test(question.text))) {
+    if (await countryButton.isVisible().catch(() => false) && !questions.some((question) => /phone country/i.test(question.text))) {
       const phoneIndex = Math.max(0, questions.findIndex((question) => /phone/i.test(question.text)))
       questions.splice(phoneIndex, 0, {
         id: 'phone_country_code',
@@ -26,11 +26,19 @@ export class WorkableApplicationPage {
         fieldType: 'select',
         required: true,
         locator: { kind: 'field', value: 'label:Phone country code' },
-        answered: false,
+        answered: await this.phoneCountryAnswered(),
         inputType: 'country-code',
       })
     }
     return questions
+  }
+
+  private async phoneCountryAnswered() {
+    const button = this.page.locator(workableSelectors.phoneCountryButton)
+    const title = await button.getAttribute('title').catch(() => '') || ''
+    const dialElement = button.locator('.iti__selected-dial-code')
+    const dial = await dialElement.count() ? await dialElement.textContent() || '' : ''
+    return /\+\d{1,4}(?:\D|$)/.test(`${title} ${dial}`)
   }
 
   async focus(question: AdapterQuestion) {
@@ -47,7 +55,9 @@ export class WorkableApplicationPage {
       const isoCode = country?.isoCode.toLowerCase()
       if (!digits) throw new Error(`The saved phone country “${desired}” has no dial code.`)
       const button = this.page.locator(workableSelectors.phoneCountryButton)
-      const current = `${await button.getAttribute('title').catch(() => '') || ''} ${await button.locator('.iti__selected-dial-code').textContent().catch(() => '') || ''}`
+      const dialElement = button.locator('.iti__selected-dial-code')
+      const dial = await dialElement.count() ? await dialElement.textContent() || '' : ''
+      const current = `${await button.getAttribute('title').catch(() => '') || ''} ${dial}`
       if (!new RegExp(`\\+${digits}(?:\\D|$)`).test(current)) {
         await button.click()
         const option = this.page.locator(isoCode

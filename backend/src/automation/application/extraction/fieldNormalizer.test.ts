@@ -28,3 +28,8 @@ test('rejects intl-tel country dumps as a Phone question', () => {
   assert.equal(label, 'Phone')
   assert.equal(pickQuestionLabel([dump], []), '')
 })
+
+test('keeps a complete narrative question longer than eighty characters', () => {
+  const question = 'Describe a technical project you are proud of, including the problem you solved, your approach, and what you learned from the experience.'
+  assert.equal(pickQuestionLabel([question]), question)
+})

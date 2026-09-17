@@ -10,7 +10,7 @@ export function ApplicationForm({
   disabled?: boolean
   onUpdateAnswers: (fields: Array<{ id: string; value: string }>) => void
 }) {
-  return <CustomApplicationForm run={run} disabled={disabled} onUpdateAnswers={onUpdateAnswers} />
+  return <CustomApplicationForm key={run.id} run={run} disabled={disabled} onUpdateAnswers={onUpdateAnswers} />
 }
 
 export { CustomApplicationForm }

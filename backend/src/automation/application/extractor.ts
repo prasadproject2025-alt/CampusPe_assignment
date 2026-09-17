@@ -1,3 +1,4 @@
+import type { Browser, BrowserContext, Page } from 'playwright-core'
 import { launchHeadlessAutomationBrowser, runWithBrowserPermit } from '../browserLauncher.js'
 import { detectAdapter } from '../registry.js'
 import { fetchAshbyApplicationForm } from './ashbyForm.js'
@@ -8,17 +9,20 @@ import { fetchGreenhouseApplicationForm } from './greenhouseForm.js'
 import { logApplicationSchema } from './schema.js'
 import type { ExtractedApplication } from './resolver.js'
 
-async function extractWithDisposableBrowser(board: string, jobUrl: string): Promise<ExtractedApplication> {
+type RetainBlockedBrowser = (worker: { browser: Browser; context: BrowserContext; page: Page }) => void
+
+async function extractWithDisposableBrowser(board: string, jobUrl: string, retainBlocked?: RetainBlockedBrowser): Promise<ExtractedApplication> {
   const adapter = detectAdapter(jobUrl)
   if (!adapter || adapter.id !== board) throw new Error('The job-board adapter is unavailable.')
   return runWithBrowserPermit('extract', async () => {
     const { browser, context } = await launchHeadlessAutomationBrowser()
     const page = await context.newPage()
+    let retained = false
     try {
       await adapter.openApplication(page, jobUrl)
-      await adapter.waitForApplication(page)
       const blocker = await adapter.detectBlocker(page)
       if (blocker) {
+        if (retainBlocked) { retainBlocked({ browser, context, page }); retained = true }
         return {
           board,
           jobId: '',
@@ -32,6 +36,7 @@ async function extractWithDisposableBrowser(board: string, jobUrl: string): Prom
           manualRequired: { reason: blocker.message, code: blocker.type },
         }
       }
+      await adapter.waitForApplication(page)
       await page.evaluate(`(() => { var form = document.querySelector('form'); if (form) form.scrollTo(0, form.scrollHeight); window.scrollTo(0, document.body.scrollHeight); })()`)
       await page.waitForTimeout(400)
       const job = await adapter.extractJob(page, jobUrl)
@@ -73,14 +78,16 @@ async function extractWithDisposableBrowser(board: string, jobUrl: string): Prom
         questions,
       }
     } finally {
+      if (!retained) {
       await page.close().catch(() => undefined)
       await context.close().catch(() => undefined)
       await browser.close().catch(() => undefined)
+      }
     }
   })
 }
 
-export async function extractApplicationSchema(board: string, jobUrl: string): Promise<ExtractedApplication> {
+export async function extractApplicationSchema(board: string, jobUrl: string, retainBlocked?: RetainBlockedBrowser): Promise<ExtractedApplication> {
   const capabilities = boardCapabilities(board)
   if (capabilities.extractMode === 'http') {
     const form = board === 'ashby'
@@ -102,7 +109,7 @@ export async function extractApplicationSchema(board: string, jobUrl: string): P
     }
   }
   if (capabilities.extractMode === 'server_browser') {
-    return extractWithDisposableBrowser(board, jobUrl)
+    return extractWithDisposableBrowser(board, jobUrl, retainBlocked)
   }
   throw new Error(`${board} cannot extract an application schema.`)
 }

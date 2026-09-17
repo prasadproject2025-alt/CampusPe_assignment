@@ -4,8 +4,8 @@ import { launchHeadlessAutomationBrowser, runWithBrowserPermit } from '../browse
 import { detectAdapter } from '../registry.js'
 import { dispatchPreviewInput, startRunPreview, stopRunPreview, type PreviewInput } from '../preview.js'
 import type { JobBoardAdapter } from '../types.js'
-import { atsConfirmationDetected, DEFAULT_CONFIRMATION_TIMEOUT_MS, detectManualBlocker } from './submissionConfirmation.js'
-import { fillReviewedApplicationOnPage } from './submission.js'
+import { atsConfirmationDetected, atsSubmissionRejected, atsRejectionMessage, visibleSubmissionValidationError, DEFAULT_CONFIRMATION_TIMEOUT_MS, detectManualBlocker } from './submissionConfirmation.js'
+import { assertLiveFormReadyToSubmit, fillReviewedApplicationOnPage } from './submission.js'
 import type { ApplicationField } from './types.js'
 
 export type AssistedSessionStatus =
@@ -37,6 +37,9 @@ type AssistedSession = {
   userId: string
   runId: string
   jobUrl: string
+  fields: ApplicationField[]
+  submitBusy: boolean
+  submitAttempted: boolean
   allowedHosts: Set<string>
   browser: Browser
   context: BrowserContext
@@ -57,7 +60,7 @@ export const DEFAULT_ASSISTED_INACTIVITY_MS = 10 * 60 * 1000
 
 const CAPTCHA_REASON = 'Complete the CAPTCHA in the assisted browser, then submit the application. JobCopilot will continue monitoring the application.'
 const LOGIN_REASON = 'Sign in in the assisted browser, then submit the application. JobCopilot will continue monitoring the application.'
-const USER_SUBMIT_REASON = 'Submit the application in the assisted browser when you are ready. JobCopilot will not click Submit for you.'
+const USER_SUBMIT_REASON = 'Submit the application in the assisted browser when you are ready. You can also use Submit application on the side panel.'
 
 const EXTRA_HOSTS = [
   'google.com', 'www.google.com', 'www.gstatic.com', 'gstatic.com',
@@ -164,24 +167,56 @@ export function touchAssistedSession(userId: string, runId: string) {
   session.lastActivityAt = Date.now()
 }
 
-async function installSubmitProbe(page: Page) {
-  await page.evaluate(`(() => {
+async function installSubmitProbe(page: Page, session: AssistedSession) {
+  await page.exposeBinding('__jobcopilotValidateSubmit', async () => {
+    if (session.submitAttempted) return false
+    try {
+      const blocker = await detectManualBlocker(page, session.adapter)
+      if (blocker) throw new Error(blocker.message)
+      await assertLiveFormReadyToSubmit(session.adapter, page, [])
+      session.submitAttempted = true
+      session.status = 'SUBMITTING'
+      session.reason = 'Submitting the application at your request.'
+      session.confirmationDeadline = Date.now() + session.confirmationTimeoutMs
+      emit(session)
+      return true
+    } catch (error) {
+      session.status = 'MANUAL_REQUIRED'
+      session.reason = error instanceof Error ? error.message : 'Complete the required fields before submitting.'
+      emit(session)
+      return false
+    }
+  })
+
+  const script = `(() => {
     if (window.__jobcopilotSubmitProbe) return;
     window.__jobcopilotSubmitProbe = true;
     window.__jobcopilotUserSubmit = false;
+    var validating = false;
+    var approved = false;
     document.addEventListener('click', function (event) {
       var node = event.target;
       if (!node || !node.closest) return;
       var control = node.closest('button, input[type="submit"], [role="button"]');
       if (!control) return;
       var text = ((control.innerText || control.value || control.getAttribute('aria-label') || '') + '').toLowerCase();
-      if (/submit|apply|send application/.test(text)) window.__jobcopilotUserSubmit = true;
+      if (!/submit|apply|send application/.test(text) && control.type !== 'submit') return;
+      if (approved) { approved = false; window.__jobcopilotUserSubmit = true; return; }
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (validating) return;
+      validating = true;
+      window.__jobcopilotValidateSubmit().then(function (valid) {
+        validating = false;
+        if (valid && control.isConnected) { approved = true; control.click(); }
+      }).catch(function () { validating = false; });
     }, true);
-  })()`).catch(() => undefined)
+  })()`
+  await page.addInitScript(script)
+  await page.evaluate(script)
 }
 
 async function userClickedSubmit(page: Page) {
-  return Boolean(await page.evaluate(`Boolean(window.__jobcopilotUserSubmit)`).catch(() => false))
+  return Boolean(await page.evaluate(`(() => { const clicked = Boolean(window.__jobcopilotUserSubmit); window.__jobcopilotUserSubmit = false; return clicked; })()`).catch(() => false))
 }
 
 async function watchTick(session: AssistedSession) {
@@ -197,6 +232,10 @@ async function watchTick(session: AssistedSession) {
     await closeAssistedSession(session.id, 'SUBMITTED', 'The job board confirmed the application was submitted.')
     return
   }
+  if (await atsSubmissionRejected(session.page)) {
+    await closeAssistedSession(session.id, 'FAILED', await atsRejectionMessage(session.page))
+    return
+  }
   const blocker = await detectManualBlocker(session.page, session.adapter).catch(() => null)
   if (blocker && session.status !== 'MANUAL_REQUIRED' && session.status !== 'VERIFYING' && session.status !== 'SUBMITTED') {
     session.status = 'MANUAL_REQUIRED'
@@ -210,9 +249,20 @@ async function watchTick(session: AssistedSession) {
     session.confirmationDeadline = Date.now() + session.confirmationTimeoutMs
     emit(session)
   }
+  if (session.confirmationDeadline) {
+    const validation = await visibleSubmissionValidationError(session.page)
+    if (validation) {
+      session.status = 'MANUAL_REQUIRED'
+      session.reason = `ANSWER_REQUIRES_USER: ${validation}`
+      session.confirmationDeadline = null
+      session.submitAttempted = false
+      emit(session)
+      return
+    }
+  }
   if (session.confirmationDeadline && Date.now() >= session.confirmationDeadline && !await atsConfirmationDetected(session.page)) {
     session.status = 'MANUAL_REQUIRED'
-    session.reason = 'SUBMISSION_TIMEOUT: The employer site did not confirm submission. Clicking Submit is not enough. Complete any remaining steps in the assisted browser.'
+    session.reason = 'SUBMISSION_TIMEOUT: No confirmation has arrived. The outcome is unknown. This same page is still being watched; another Submit is disabled.'
     session.confirmationDeadline = null
     emit(session)
   }
@@ -232,6 +282,34 @@ export async function dispatchAssistedInput(userId: string, runId: string, input
   }
   session.lastActivityAt = Date.now()
   await dispatchPreviewInput(runId, input)
+}
+
+export async function submitAssistedApplication(userId: string, runId: string) {
+  const id = sessionByRun.get(runId)
+  if (!id) throw new Error('Open the assisted browser before submitting.')
+  const session = requireOwnedSession(userId, id)
+  if (session.submitBusy || session.submitAttempted) return snapshot(session)
+  if (!['WAITING_FOR_USER', 'USER_REVIEWING', 'MANUAL_REQUIRED'].includes(session.status)) throw new Error('Wait for the assisted form to finish loading.')
+  session.submitBusy = true
+  session.lastActivityAt = Date.now()
+  try {
+    if (await atsSubmissionRejected(session.page)) return await closeAssistedSession(session.id, 'FAILED', await atsRejectionMessage(session.page))
+    const result = await fillReviewedApplicationOnPage({ adapter: session.adapter, page: session.page, userId, jobUrl: session.jobUrl, fields: session.fields, preserveLiveAnswers: true })
+    if (!result.ok) throw new Error(result.code === 'MANUAL_REQUIRED' ? result.blocker.message : result.error)
+    await assertLiveFormReadyToSubmit(session.adapter, session.page, session.fields)
+    await session.adapter.submitApplication(session.page)
+    if (!sessions.has(session.id)) return snapshot(session)
+    session.submitAttempted = true
+    session.status = 'VERIFYING'
+    session.reason = 'Verifying submission. Waiting for the employer’s confirmation.'
+    session.confirmationDeadline = Date.now() + session.confirmationTimeoutMs
+    emit(session)
+  } catch (error) {
+    session.status = 'MANUAL_REQUIRED'
+    session.reason = error instanceof Error ? error.message : 'The employer form needs your attention.'
+    emit(session)
+  } finally { session.submitBusy = false }
+  return snapshot(session)
 }
 
 export async function cancelAssistedSession(userId: string, runId: string) {
@@ -261,7 +339,7 @@ export async function crashAssistedBrowserForTests(runId: string) {
   await session.browser.close()
 }
 
-export async function startAssistedSession(params: {
+type StartAssistedParams = {
   userId: string
   runId: string
   jobUrl: string
@@ -269,9 +347,26 @@ export async function startAssistedSession(params: {
   adapter?: JobBoardAdapter
   inactivityMs?: number
   confirmationTimeoutMs?: number
+  observeOnly?: boolean
+  existingBrowser?: { browser: Browser; context: BrowserContext; page: Page }
   openPage?: (page: Page) => Promise<void>
   onChange?: (snapshot: AssistedSessionSnapshot) => void
-}): Promise<AssistedSessionSnapshot> {
+}
+
+const pendingStarts = new Map<string, { userId: string; promise: Promise<AssistedSessionSnapshot> }>()
+
+export async function startAssistedSession(params: StartAssistedParams): Promise<AssistedSessionSnapshot> {
+  const pending = pendingStarts.get(params.runId)
+  if (pending) {
+    if (pending.userId !== params.userId) throw new Error('Assisted browser session not found.')
+    return pending.promise
+  }
+  const promise = createAssistedSession(params)
+  pendingStarts.set(params.runId, { userId: params.userId, promise })
+  try { return await promise } finally { pendingStarts.delete(params.runId) }
+}
+
+async function createAssistedSession(params: StartAssistedParams): Promise<AssistedSessionSnapshot> {
   const existingId = sessionByRun.get(params.runId)
   if (existingId) {
     const existing = sessions.get(existingId)
@@ -282,13 +377,16 @@ export async function startAssistedSession(params: {
   if (!adapter) throw new Error('The job-board adapter is unavailable.')
 
   return runWithBrowserPermit('submit', async () => {
-    const { browser, context } = await launchHeadlessAutomationBrowser()
-    const page = await context.newPage()
+    const { browser, context } = params.existingBrowser || await launchHeadlessAutomationBrowser()
+    const page = params.existingBrowser?.page || await context.newPage()
     const session: AssistedSession = {
       id: randomUUID(),
       userId: params.userId,
       runId: params.runId,
       jobUrl: params.jobUrl,
+      fields: params.fields,
+      submitBusy: false,
+      submitAttempted: Boolean(params.observeOnly),
       allowedHosts: allowedHostsFor(params.jobUrl),
       browser,
       context,
@@ -322,13 +420,21 @@ export async function startAssistedSession(params: {
     emit(session)
     try {
       await startRunPreview(params.runId, page)
+      if (params.observeOnly && params.existingBrowser) {
+        await installSubmitProbe(page, session)
+        session.status = 'MANUAL_REQUIRED'
+        session.reason = 'SUBMISSION_TIMEOUT: Confirmation has not arrived. This is the original page; JobCopilot is still watching it. Do not submit again unless the employer clearly reports that the first attempt failed.'
+        emit(session)
+        startWatch(session)
+        return snapshot(session)
+      }
       session.status = 'FILLING'
       session.reason = 'Filling safe answers in the assisted browser.'
       emit(session)
       if (params.openPage) await params.openPage(page)
-      else {
+      else if (!params.existingBrowser) {
         await adapter.openApplication(page, params.jobUrl)
-        await adapter.waitForApplication(page)
+        if (!await detectManualBlocker(page, adapter)) await adapter.waitForApplication(page)
       }
       const filled = await fillReviewedApplicationOnPage({
         adapter,
@@ -336,8 +442,9 @@ export async function startAssistedSession(params: {
         userId: params.userId,
         jobUrl: params.jobUrl,
         fields: params.fields,
+        preserveLiveAnswers: true,
       })
-      await installSubmitProbe(page)
+      await installSubmitProbe(page, session)
       session.lastActivityAt = Date.now()
       if (!filled.ok && filled.code === 'MANUAL_REQUIRED') {
         session.status = 'MANUAL_REQUIRED'

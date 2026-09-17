@@ -3,13 +3,13 @@ const REQUEST_TIMEOUT_MS = 10_000
 type Ats = 'ashby' | 'greenhouse' | 'lever' | 'workable'
 type JsonRecord = Record<string, unknown>
 const DEFAULT_COMPANIES: Record<Ats, string[]> = {
-  ashby: ['ramp', 'linear', 'notion', 'render', 'revenuecat', 'posthog', 'supabase'],
+  ashby: ['ema', 'ramp', 'linear', 'notion', 'render', 'revenuecat', 'posthog', 'supabase'],
   greenhouse: ['stripe', 'airtable', 'asana', 'brex', 'chime', 'cockroachlabs', 'contentful', 'databricks', 'duolingo'],
-  lever: ['spotify'], workable: ['huggingface'],
+  lever: ['galepartners', 'dnb', 'spotify'], workable: ['exponent-energy', 'dodge-construction-network', 'minderacraft', 'huggingface'],
 }
 export type RecommendedJob = {
   id: string; source: Ats; company: string; title: string; location: string; workplaceType: string; employmentType: string
-  salary: string | null; department: string | null; skills: string[]; publishedAt: string | null; jobUrl: string; applyUrl: string
+  countryCode: 'IN' | null; salary: string | null; department: string | null; skills: string[]; publishedAt: string | null; jobUrl: string; applyUrl: string
 }
 export type JobSourceStatus = { source: Ats; companies: number; jobs: number; failed: number }
 let cache: { expiresAt: number; jobs: RecommendedJob[]; sources: JobSourceStatus[] } | null = null
@@ -56,7 +56,7 @@ function normalize(input: { source: Ats; company: string; id: unknown; title: un
   if (!skills.length && department) skills.push(department)
   return { id: asString(input.id) || `${input.source}:${jobUrl}`, source: input.source, company: companyLabel(input.company), title,
     location: location || (asBoolean(input.remote) ? 'Remote' : 'Location not specified'), workplaceType: inferWorkplace(location, asBoolean(input.remote), input.workplaceType),
-    employmentType: enumLabel(asString(input.employmentType) || 'FullTime'), salary: asString(input.salary), department, skills,
+    countryCode: isIndiaLocation(location || '') ? 'IN' : null, employmentType: enumLabel(asString(input.employmentType) || 'FullTime'), salary: asString(input.salary), department, skills,
     publishedAt: isoDate(input.publishedAt), jobUrl, applyUrl }
 }
 
@@ -69,19 +69,42 @@ async function fetchAshby(company: string) {
 }
 async function fetchGreenhouse(company: string) {
   const payload = asRecord(await getJson(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(company)}/jobs`))
-  return asArray(payload.jobs).map(asRecord).map((job) => normalize({ source: 'greenhouse', company, id: job.id, title: job.title, location: asRecord(job.location).name, department: asArray(job.departments).map(asRecord)[0]?.name, remote: null, workplaceType: null, employmentType: null, publishedAt: job.updated_at, jobUrl: job.absolute_url, applyUrl: job.absolute_url })).filter((job): job is RecommendedJob => Boolean(job))
+  return asArray(payload.jobs).map(asRecord).map((job) => normalize({ source: 'greenhouse', company, id: job.id, title: job.title, location: asRecord(job.location).name, department: asArray(job.departments).map(asRecord)[0]?.name, remote: null, workplaceType: null, employmentType: null, publishedAt: job.updated_at, jobUrl: job.absolute_url, applyUrl: `https://job-boards.greenhouse.io/${encodeURIComponent(company)}/jobs/${encodeURIComponent(String(job.id))}` })).filter((job): job is RecommendedJob => Boolean(job))
 }
 async function fetchLever(company: string) {
   const payload = await getJson(`https://api.lever.co/v0/postings/${encodeURIComponent(company)}?mode=json`)
   return asArray(payload).map(asRecord).map((job) => { const categories = asRecord(job.categories); return normalize({ source: 'lever', company, id: job.id, title: job.text, location: categories.location, department: categories.team, remote: null, workplaceType: categories.workplaceType, employmentType: categories.commitment, publishedAt: job.createdAt, jobUrl: job.hostedUrl, applyUrl: job.applyUrl, description: `${asString(job.descriptionPlain) || ''} ${asString(job.additionalPlain) || ''}` }) }).filter((job): job is RecommendedJob => Boolean(job))
 }
+export function workableLocation(job: JsonRecord) {
+  if (asString(job.location)) return asString(job.location)!
+  const location = asRecord(job.location)
+  return [location.city || job.city, location.region || job.state, location.country || job.country]
+    .map(asString).filter(Boolean).join(', ')
+}
+
+export function isIndiaLocation(location: string) {
+  // Use the posting's location, never company headquarters or description keywords.
+  return /\b(?:india|bengaluru|bangalore|mumbai|pune|hyderabad|chennai|gurugram|gurgaon|noida|new delhi|delhi|kolkata|kochi|cochin|ahmedabad|jaipur|indore|chandigarh|thiruvananthapuram|trivandrum|coimbatore|navi mumbai|nagpur|vadodara)\b/i.test(location)
+    && !/\bindiana(?:polis)?\b/i.test(location)
+}
+
+export function filterRecommendedJobs(jobs: RecommendedJob[], query: { country: 'india' | 'all'; board: string; remote: string; q: string }) {
+  const search = query.q.toLowerCase()
+  return jobs.filter(job => {
+    if (query.country === 'india' && !isIndiaLocation(job.location)) return false
+    if (query.board !== 'all' && job.source !== query.board) return false
+    if (query.remote === 'true' && job.workplaceType.toLowerCase() !== 'remote') return false
+    return !search || [job.title, job.company, job.location, job.department, job.source, job.workplaceType, job.employmentType, ...job.skills].filter(Boolean).join(' ').toLowerCase().includes(search)
+  })
+}
+
 async function fetchWorkable(company: string) {
   const payload = asRecord(await getJson(`https://apply.workable.com/api/v1/widget/accounts/${encodeURIComponent(company)}`))
-  return asArray(payload.jobs).map(asRecord).map((job) => normalize({ source: 'workable', company, id: job.shortcode || job.id, title: job.title, location: job.location, department: job.department, remote: job.telecommuting, workplaceType: job.telecommuting, employmentType: job.employment_type, publishedAt: job.published_on, jobUrl: job.url, applyUrl: job.url })).filter((job): job is RecommendedJob => Boolean(job))
+  return asArray(payload.jobs).map(asRecord).map((job) => normalize({ source: 'workable', company, id: job.shortcode || job.id, title: job.title, location: workableLocation(job), department: job.department, remote: job.telecommuting, workplaceType: job.telecommuting, employmentType: job.employment_type, publishedAt: job.published_on, jobUrl: job.shortcode ? `https://apply.workable.com/${encodeURIComponent(company)}/j/${encodeURIComponent(String(job.shortcode))}/` : job.url, applyUrl: job.shortcode ? `https://apply.workable.com/${encodeURIComponent(company)}/j/${encodeURIComponent(String(job.shortcode))}/apply/` : job.url })).filter((job): job is RecommendedJob => Boolean(job))
 }
 const fetchers: Record<Ats, (company: string) => Promise<RecommendedJob[]>> = { ashby: fetchAshby, greenhouse: fetchGreenhouse, lever: fetchLever, workable: fetchWorkable }
 
-export async function getRecommendedJobs() {
+async function refreshRecommendedJobs() {
   if (cache && cache.expiresAt > Date.now()) return { jobs: cache.jobs, sources: cache.sources }
   const entries = Object.entries(fetchers) as Array<[Ats, (company: string) => Promise<RecommendedJob[]>]>
   const grouped = await Promise.all(entries.map(async ([source, fetcher]) => {
@@ -92,9 +115,18 @@ export async function getRecommendedJobs() {
   const unique = new Map<string, RecommendedJob>()
   grouped.flatMap((group) => group.jobs)
     .forEach((job) => unique.set(`${job.company.toLowerCase()}:${job.title.toLowerCase()}:${job.location.toLowerCase()}`, job))
-  const jobs = [...unique.values()].sort((a, b) => Date.parse(b.publishedAt || '') - Date.parse(a.publishedAt || ''))
+  const jobs = [...unique.values()].sort((a, b) => (Date.parse(b.publishedAt || '') || 0) - (Date.parse(a.publishedAt || '') || 0))
   const sources = grouped.map((group) => group.status)
   if (!jobs.length) throw new Error('No configured public job board could be reached.')
   cache = { jobs, sources, expiresAt: Date.now() + CACHE_TTL_MS }
   return { jobs, sources }
+}
+
+let pendingRefresh: ReturnType<typeof refreshRecommendedJobs> | null = null
+
+export async function getRecommendedJobs() {
+  if (cache && cache.expiresAt > Date.now()) return { jobs: cache.jobs, sources: cache.sources }
+  if (pendingRefresh) return pendingRefresh
+  pendingRefresh = refreshRecommendedJobs()
+  try { return await pendingRefresh } finally { pendingRefresh = null }
 }

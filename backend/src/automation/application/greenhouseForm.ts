@@ -3,7 +3,7 @@ import type { AdapterQuestion, JobDetails } from '../types.js'
 import { greenhouseEmbedUrl } from './embedPolicy.js'
 import { isOptionOnlyLabel } from './extraction/fieldNormalizer.js'
 import { logApplicationSchema } from './schema.js'
-import { canonicalFieldId } from './canonicalIdentity.js'
+import { canonicalFieldId, fileRole } from './canonicalIdentity.js'
 import { classifyQuestion, normalizeQuestion } from '../../resolver/normalizer.js'
 import type { ApplicationField } from './types.js'
 
@@ -152,11 +152,12 @@ export function mapGreenhouseQuestions(payload: unknown): ApplicationField[] {
       })
     }
   }
-  const fileRoles = new Set(fields.filter((field) => field.inputType === 'file').map((field) => /cover/i.test(field.text) ? 'cover_letter' : 'resume'))
+  const fileRoles = new Set(fields.filter((field) => field.inputType === 'file').map((field) => fileRole(field.text)))
   const files = new Set<string>()
   return fields.filter((field) => {
     if (field.inputType === 'file') {
-      const key = /cover/i.test(field.text) ? 'cover_letter' : 'resume'
+      const role = fileRole(field.text)
+      const key = role === 'resume' || role === 'cover_letter' ? role : field.id
       if (files.has(key)) return false
       files.add(key)
       return true

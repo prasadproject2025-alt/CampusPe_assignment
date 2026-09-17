@@ -1,3 +1,4 @@
+import { automationAnswersSchema } from './automation/answerSchema.js'
 import { randomUUID } from 'node:crypto'
 import { existsSync, unlinkSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -11,13 +12,16 @@ import { dataDir, port, rootDir, tailoredResumeDir, uploadDir } from './config.j
 import { db } from './database.js'
 import { decryptJson, encryptJson, hashPassword, verifyPassword } from './security.js'
 import { answerResolver } from './resolver/engine.js'
-import { automationManager } from './automation/manager.js'
+import { automationManager, AutomationConflictError } from './automation/manager.js'
+import { recoverInterruptedRuns } from './automation/recovery.js'
 import { emptyJpeg, getRunPreview } from './automation/preview.js'
-import { touchAssistedSession } from './automation/application/assistedSession.js'
+import { touchAssistedSession, submitAssistedApplication } from './automation/application/assistedSession.js'
 import { supportedBoards } from './automation/registry.js'
 import { City, Country, State } from 'country-state-city'
-import { getRecommendedJobs } from './jobs.js'
+import { getRecommendedJobs, filterRecommendedJobs, isIndiaLocation } from './jobs.js'
 import { extractResumeText, extractTargetJob, optimizeResume, reviewResume } from './resumeReview.js'
+import { ollamaStatus } from './resolver/ollama.js'
+import { applyResumeFactsToProfile, clearResumeFactsCache } from './resolver/resumeFacts.js'
 import { createTailoredResumeDocx, tailoredResumePreviewHtml } from './resumeDocument.js'
 
 const app = express()
@@ -25,8 +29,8 @@ app.disable('x-powered-by')
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }))
 app.use(express.json({ limit: '1mb' }))
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 50, standardHeaders: 'draft-8', legacyHeaders: false }))
-app.use('/api/applications', rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: 'draft-8', legacyHeaders: false }))
-app.use('/api/automation/runs', rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: 'draft-8', legacyHeaders: false }))
+app.use('/api/applications', rateLimit({ windowMs: 60 * 1000, limit: 200, standardHeaders: 'draft-8', legacyHeaders: false }))
+app.use('/api/automation/runs', rateLimit({ windowMs: 60 * 1000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false }))
 
 const credentialsSchema = z.object({ email: z.string().trim().email().max(255), password: z.string().min(8).max(128) })
 const signupSchema = credentialsSchema.extend({ name: z.string().trim().min(1).max(100) })
@@ -42,9 +46,6 @@ const jobContextSchema = z.object({ company: z.string().max(200).optional(), job
 const resolveSchema = z.object({ question: formQuestionSchema, job: jobContextSchema.optional() })
 const rememberSchema = z.object({ question: formQuestionSchema, answer: z.union([z.string().max(10000), z.number(), z.boolean()]), scope: z.enum(['global', 'company']).default('global'), company: z.string().max(200).optional() }).superRefine((value, context) => { if (value.scope === 'company' && !value.company) context.addIssue({ code: 'custom', path: ['company'], message: 'Company is required for company-scoped answers.' }) })
 const automationRunSchema = z.object({ jobUrl: z.string().trim().url().max(2000), autoSubmit: z.boolean().default(false), testMode: z.boolean().default(false) })
-const automationAnswersSchema = z.object({
-  fields: z.array(z.object({ id: z.string().min(1).max(200), value: z.string().max(10000) })).max(200),
-})
 const previewInputSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('click'), x: z.number().min(0).max(1), y: z.number().min(0).max(1), button: z.enum(['left', 'right']).optional() }),
   z.object({ type: z.literal('dblclick'), x: z.number().min(0).max(1), y: z.number().min(0).max(1) }),
@@ -63,6 +64,7 @@ const savedJobIdSchema = z.object({ jobId: z.string().min(1).max(2500) })
 const jobsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(100).default(24),
   board: z.enum(['all', 'ashby', 'greenhouse', 'lever', 'workable']).default('all'), remote: z.enum(['true', 'false']).default('false'),
+  country: z.enum(['india', 'all']).default('india'),
   q: z.string().trim().max(200).default(''),
 })
 const resumeReviewSchema = z.object({ jobUrl: z.string().trim().url().max(2500).optional() })
@@ -139,15 +141,19 @@ app.put('/api/profile', requireAuth, (request, response, next) => {
 
 const upload = multer({ storage: multer.diskStorage({ destination: uploadDir, filename: (_request, file, callback) => callback(null, `${randomUUID()}${file.originalname.toLowerCase().endsWith('.pdf') ? '.pdf' : file.originalname.toLowerCase().endsWith('.docx') ? '.docx' : '.doc'}`) }), limits: { fileSize: 10 * 1024 * 1024, files: 1 }, fileFilter: (_request, file, callback) => callback(null, ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.mimetype)) })
 
-app.post('/api/profile/resume', requireAuth, upload.single('resume'), (request, response) => {
-  if (!request.file) return response.status(400).json({ error: { code: 'FILE_REQUIRED', message: 'Choose a PDF, DOC, or DOCX resume.' } })
-  const current = getProfile(request.user!.id)
-  if (current?.resume_storage_name) {
-    const oldPath = resolve(uploadDir, String(current.resume_storage_name))
-    if (oldPath.startsWith(uploadDir) && existsSync(oldPath)) unlinkSync(oldPath)
-  }
-  db.prepare('UPDATE profiles SET resume_filename=?, resume_storage_name=?, resume_mime=?, updated_at=? WHERE user_id=?').run(request.file.originalname, request.file.filename, request.file.mimetype, new Date().toISOString(), request.user!.id)
-  response.json({ data: { resume: { filename: request.file.originalname, mime: request.file.mimetype } } })
+app.post('/api/profile/resume', requireAuth, upload.single('resume'), async (request, response, next) => {
+  try {
+    if (!request.file) return response.status(400).json({ error: { code: 'FILE_REQUIRED', message: 'Choose a PDF, DOC, or DOCX resume.' } })
+    const current = getProfile(request.user!.id)
+    if (current?.resume_storage_name) {
+      const oldPath = resolve(uploadDir, String(current.resume_storage_name))
+      if (oldPath.startsWith(uploadDir) && existsSync(oldPath)) unlinkSync(oldPath)
+    }
+    db.prepare('UPDATE profiles SET resume_filename=?, resume_storage_name=?, resume_mime=?, updated_at=? WHERE user_id=?').run(request.file.originalname, request.file.filename, request.file.mimetype, new Date().toISOString(), request.user!.id)
+    clearResumeFactsCache(request.user!.id)
+    try { await applyResumeFactsToProfile(request.user!.id) } catch { /* Upload still succeeds if Ollama is unavailable. */ }
+    response.json({ data: { resume: { filename: request.file.originalname, mime: request.file.mimetype } } })
+  } catch (error) { next(error) }
 })
 
 app.get('/api/profile/resume/file', requireAuth, (request, response) => {
@@ -260,25 +266,19 @@ app.get('/api/automation/boards', requireAuth, (_request, response) => response.
 
 app.get('/api/jobs/recommended', requireAuth, async (request, response, next) => {
   try {
-    const { jobs, sources } = await getRecommendedJobs()
     const query = jobsQuerySchema.parse(request.query)
-    const search = query.q.toLowerCase()
-    const filtered = jobs.filter((job) => {
-      if (query.board !== 'all' && job.source !== query.board) return false
-      if (query.remote === 'true' && job.workplaceType !== 'Remote') return false
-      if (!search) return true
-      return [job.title, job.company, job.location, job.department, job.source, job.workplaceType, job.employmentType, ...job.skills]
-        .filter(Boolean).join(' ').toLowerCase().includes(search)
-    })
+    const { jobs, sources } = await getRecommendedJobs()
+    const filtered = filterRecommendedJobs(jobs, query)
+    const countrySources = sources.map(source => ({ ...source, jobs: jobs.filter(job => job.source === source.source && (query.country === 'all' || isIndiaLocation(job.location))).length }))
     const page = filtered.slice(query.offset, query.offset + query.limit)
     response.set('Cache-Control', 'no-store')
-    response.json({ data: { jobs: page, sources, pagination: { offset: query.offset, limit: query.limit, total: filtered.length, hasMore: query.offset + page.length < filtered.length } } })
+    response.json({ data: { jobs: page, sources: countrySources, pagination: { offset: query.offset, limit: query.limit, total: filtered.length, hasMore: query.offset + page.length < filtered.length } } })
   } catch (error) { next(error) }
 })
 
 app.get('/api/jobs/saved', requireAuth, (request, response) => {
   const rows = db.prepare('SELECT job_json, saved_at FROM saved_jobs WHERE user_id=? ORDER BY saved_at DESC').all(request.user!.id) as Array<{ job_json: string; saved_at: string }>
-  response.json({ data: { jobs: rows.map((row) => ({ ...JSON.parse(row.job_json), savedAt: row.saved_at })) } })
+  response.json({ data: { jobs: rows.map((row) => { const job = JSON.parse(row.job_json); return { ...job, countryCode: isIndiaLocation(job.location || '') ? 'IN' : null, savedAt: row.saved_at } }) } })
 })
 
 app.put('/api/jobs/saved', requireAuth, (request, response, next) => {
@@ -343,7 +343,7 @@ app.post('/api/applications/:id/submit', requireAuth, async (request, response, 
   try {
     const run = await automationManager.submit(request.user!.id, String(request.params.id))
     response.json({ data: { run } })
-  } catch (error) { next(error) }
+  } catch (error) { next(error instanceof Error ? new AutomationConflictError(error.message) : error) }
 })
 
 app.get('/api/automation/runs', requireAuth, (request, response) => response.json({ data: { runs: automationManager.list(request.user!.id) } }))
@@ -372,7 +372,7 @@ app.post('/api/automation/runs/:id/submit', requireAuth, async (request, respons
   try {
     const run = await automationManager.submit(request.user!.id, String(request.params.id))
     response.json({ data: { run } })
-  } catch (error) { next(error) }
+  } catch (error) { next(error instanceof Error ? new AutomationConflictError(error.message) : error) }
 })
 
 app.post('/api/automation/runs/:id/assisted', requireAuth, async (request, response, next) => {
@@ -380,6 +380,13 @@ app.post('/api/automation/runs/:id/assisted', requireAuth, async (request, respo
     const run = await automationManager.startAssisted(request.user!.id, String(request.params.id))
     response.status(202).json({ data: { run } })
   } catch (error) { next(error) }
+})
+
+app.post('/api/automation/runs/:id/assisted/submit', requireAuth, async (request, response, next) => {
+  try {
+    await submitAssistedApplication(request.user!.id, String(request.params.id))
+    response.json({ data: { run: automationManager.get(request.user!.id, String(request.params.id)) } })
+  } catch (error) { next(error instanceof Error ? new AutomationConflictError(error.message) : error) }
 })
 
 app.post('/api/automation/runs/:id/assisted/cancel', requireAuth, async (request, response, next) => {
@@ -413,10 +420,16 @@ app.use('/api', (_request, response) => {
 })
 
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  if (error instanceof AutomationConflictError) return response.status(409).json({ error: { code: 'APPLICATION_STATE_CONFLICT', message: error.message } })
   if (error instanceof ZodError) return response.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Please check the highlighted information.', details: error.issues } })
   if (error instanceof multer.MulterError) return response.status(400).json({ error: { code: 'UPLOAD_ERROR', message: error.code === 'LIMIT_FILE_SIZE' ? 'Resume must be smaller than 10 MB.' : error.message } })
+  if (error instanceof Error && error.message) return response.status(400).json({ error: { code: 'BAD_REQUEST', message: error.message } })
   console.error(error)
   response.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong locally.' } })
 })
 
-app.listen(port, '127.0.0.1', () => console.log(`JobCopilot API ready at http://127.0.0.1:${port}`))
+app.listen(port, () => {
+  recoverInterruptedRuns(db)
+  console.log(`JobCopilot API ready at http://localhost:${port}`)
+  void ollamaStatus().then((status) => console.log(status.message))
+})

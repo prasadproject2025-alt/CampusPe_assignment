@@ -251,3 +251,5 @@ footer { padding: 28px 0; border-top: 1px solid var(--line); background: #fff; }
 .application-readiness { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; color: #5c6478; font-size: 11px; line-height: 1.4; }
 .field-source, .ai-review-note, .sensitive-field-note { display: block; color: #6a7286; }
 .ai-review-note, .sensitive-field-note { color: #9a4d12; font-weight: 650; }
+
+@media (max-width: 720px) { .job-card-actions a.button { grid-column: 2 / -1; } }

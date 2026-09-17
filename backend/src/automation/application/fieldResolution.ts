@@ -17,6 +17,10 @@ export function parseSubmissionFailureCode(currentStep?: string | null, error?: 
   return SUBMISSION_FAILURE_CODES.find((code) => message.startsWith(`${code}:`) || message === code) || null
 }
 
+export function isEmployerSpamRejection(error?: string | null) {
+  return /possible spam|flagged this submission as possible spam|submission was flagged/i.test(error || '')
+}
+
 export class FieldResolutionError extends Error {
   readonly code = 'FIELD_NOT_FOUND'
   readonly requiresManualAction = true
@@ -59,6 +63,15 @@ export class SubmissionTimeoutError extends Error {
   constructor(message = 'Timed out waiting for the employer site to confirm the application was submitted.') {
     super(message)
     this.name = 'SubmissionTimeoutError'
+  }
+}
+
+export class AtsRejectionError extends Error {
+  readonly code = 'SUBMISSION_FAILED'
+
+  constructor(message = 'SUBMISSION_FAILED: The employer could not accept the application. No successful submission was confirmed.') {
+    super(message)
+    this.name = 'AtsRejectionError'
   }
 }
 

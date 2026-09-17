@@ -160,3 +160,58 @@ test('NATIVE_FORM Start never launches Playwright for Ashby or Greenhouse; Lever
   assert.notEqual(run?.application?.displayMode, 'browser_assisted')
   assert.equal(run?.status, 'FAILED')
 })
+
+test('saved resume does not satisfy a required portfolio attachment or optional photo', async (t) => {
+  const originalFetch = globalThis.fetch
+  const userId = createUser()
+  db.prepare('UPDATE profiles SET resume_storage_name=?,resume_filename=? WHERE user_id=?').run('fixture.pdf', 'Resume.pdf', userId)
+  globalThis.fetch = (async () => jsonResponse({ ...greenhouseFixture, questions: [
+    ...greenhouseFixture.questions,
+    { label: 'Photo', required: false, fields: [{ name: 'photo', type: 'input_file', values: [] }] },
+    { label: 'Portfolio attachment', required: true, fields: [{ name: 'portfolio_file', type: 'input_file', values: [] }] },
+  ] })) as typeof fetch
+  t.after(() => { globalThis.fetch = originalFetch; db.prepare('DELETE FROM users WHERE id=?').run(userId) })
+  const created = automationManager.create(userId, greenhouseUrl, false, true)!
+  const run = await waitForSettled(userId, created.id)
+  assert.equal(run?.status, 'PAUSED_NEEDS_INPUT')
+  assert.equal(run?.application?.fields.find(f => f.text === 'Resume')?.value, 'Resume.pdf')
+  assert.equal(run?.application?.fields.find(f => f.text === 'Photo')?.value, '')
+  assert.equal(run?.application?.fields.find(f => f.text === 'Portfolio attachment')?.status, 'unresolved')
+})
+
+test('duplicate submit returns existing state and spam-rejected runs cannot open another assisted browser', async (t) => {
+  const userId = createUser()
+  t.after(() => db.prepare('DELETE FROM users WHERE id=?').run(userId))
+  const id = randomUUID(), now = new Date().toISOString()
+  db.prepare('INSERT INTO automation_runs (id,user_id,job_url,job_board,status,current_step,auto_submit,test_mode,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .run(id,userId,greenhouseUrl,'greenhouse','SUBMITTING','SUBMITTING_APPLICATION',1,0,now,now)
+  assert.equal((await automationManager.submit(userId,id))?.status, 'SUBMITTING')
+  db.prepare("UPDATE automation_runs SET status='SUBMITTED' WHERE id=?").run(id)
+  assert.equal((await automationManager.submit(userId,id))?.status, 'SUBMITTED')
+  db.prepare("UPDATE automation_runs SET status='PAUSED_NEEDS_INPUT', current_step='SUBMISSION_FAILED', error_message='The employer rejected this submission as possible spam.' WHERE id=?").run(id)
+  await assert.rejects(automationManager.startAssisted(userId,id), /cannot be retried/)
+  await assert.rejects(automationManager.submit(userId,id), /Automatic retries are disabled/)
+  db.prepare("UPDATE automation_runs SET current_step='SUBMISSION_TIMEOUT', error_message='No confirmation arrived.' WHERE id=?").run(id)
+  await assert.rejects(automationManager.submit(userId,id), /unknown outcome/)
+  await assert.rejects(automationManager.startAssisted(userId,id), /original timed-out session/)
+})
+
+test('long Lever option IDs save through the API schema and clear the answered pause', async () => {
+  const { automationAnswersSchema } = await import('../answerSchema.js')
+  const userId = createUser()
+  const runId = randomUUID()
+  const id = 'ats:application:radio:are_you_a_current_or_previous_employee_of_dun_bradstreet:current_contractor|current_employee_or_intern|former_contractor|former_employee_or_intern|no_previous_work_experience_with_the_company'
+  assert.ok(id.length > 200)
+  const field = { id, text: 'Are you a current or previous employee of Dun & Bradstreet?', fieldType: 'select', inputType: 'radio', required: true, options: ['No previous work experience with the company'], value: '', status: 'unresolved' }
+  const now = new Date().toISOString()
+  try {
+    db.prepare(`INSERT INTO automation_runs (id,user_id,job_url,job_board,status,current_step,auto_submit,test_mode,strategy,application_json,pause_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(runId,userId,leverUrl,'lever','PAUSED_NEEDS_INPUT','WAITING_FOR_USER',0,0,'CUSTOM_FORM',JSON.stringify({ fields: [field] }),JSON.stringify({question: field,reason:'No matching fact'}),now,now)
+    const input = automationAnswersSchema.parse({fields:[{id,value:field.options[0]}]})
+    const saved = automationManager.updateAnswers(userId,runId,input.fields)
+    assert.equal(saved?.application?.fields[0]?.value, field.options[0])
+    assert.equal(saved?.application?.fields[0]?.status, 'manual')
+    assert.equal(saved?.pause?.question, undefined)
+    assert.match(saved?.pause?.reason || '', /saved/)
+    assert.throws(() => automationManager.updateAnswers(userId,runId,[{id:'unknown',value:'No'}]), /fields changed/)
+  } finally { db.prepare('DELETE FROM users WHERE id=?').run(userId) }
+})

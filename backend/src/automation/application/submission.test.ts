@@ -7,7 +7,15 @@ import { extractQuestionsFromPage } from './extraction/domExtractor.js'
 import { fillLiveAnswer } from './extraction/liveResolver.js'
 import { questionsToFields } from './formModel.js'
 import { runReviewedSubmission, submitApplicationWithServerBrowser } from './submission.js'
+import { ATS_REJECTION_PATTERN, atsRejectionMessage } from './submissionConfirmation.js'
 import type { ApplicationField } from './types.js'
+
+test('Ashby spam banner matches the rejection pattern', () => {
+  assert.match(
+    "We couldn't submit your application. Your application submission was flagged as possible spam.",
+    ATS_REJECTION_PATTERN,
+  )
+})
 
 const successFormHtml = `<!doctype html><html><body>
 <form id="application-form">
@@ -79,6 +87,22 @@ const timeoutHtml = `<!doctype html><html><body>
 <script>
 document.getElementById('btn-submit').addEventListener('click', function () {
   window.__submitClicks = (window.__submitClicks || 0) + 1;
+});
+</script>
+</body></html>`
+
+const spamHtml = `<!doctype html><html><body>
+<form id="application-form">
+  <div class="application-question">
+    <div class="application-label"><span class="text">Full name</span></div>
+    <input name="name" required />
+  </div>
+  <button type="button" id="btn-submit">Submit application</button>
+</form>
+<script>
+document.getElementById('btn-submit').addEventListener('click', function () {
+  window.__submitClicks = (window.__submitClicks || 0) + 1;
+  document.body.insertAdjacentHTML('afterbegin', '<p>We couldn\\'t submit your application. Your application submission was flagged as possible spam. If you believe this was a mistake, please submit your application again.</p>');
 });
 </script>
 </body></html>`
@@ -274,6 +298,26 @@ test('submission timeout does not return success', async (t) => {
   }, t)
 })
 
+test('employer spam rejection is SUBMISSION_FAILED and not success', async (t) => {
+  await withPage(async (page) => {
+    await page.setContent(spamHtml)
+    const questions = await extractQuestionsFromPage(page)
+    const fields = answeredFields(questions, { 'Full name': 'Ada Lovelace' })
+    const result = await runReviewedSubmission({
+      adapter: fixtureAdapter(),
+      page,
+      userId: 'submission-fixture-user',
+      jobUrl: 'https://example.test/apply',
+      fields,
+      confirmationTimeoutMs: 2_000,
+    })
+    assert.equal(result.ok, false)
+    assert.equal(result.code, 'SUBMISSION_FAILED')
+    assert.match(result.error, /spam/i)
+    assert.notEqual(result.code, 'SUBMISSION_SUCCESS')
+  }, t)
+})
+
 test('submit click without confirmation MUST NOT return success', async (t) => {
   await withPage(async (page) => {
     await page.setContent(noConfirmationHtml)
@@ -325,4 +369,18 @@ test('disposable submit worker does not treat a click as success', async (t) => 
   }
   assert.equal(result.ok, false)
   assert.notEqual(result.code, 'SUBMISSION_SUCCESS')
+})
+
+
+test('generic employer failure is not mislabeled as spam', async () => {
+  await runWithBrowserPermit('test', async () => {
+    const { browser, context } = await launchHeadlessAutomationBrowser()
+    try {
+      const page = await context.newPage()
+      await page.setContent("<p>We couldn't submit your application. Please check the required fields.</p>")
+      assert.doesNotMatch(await atsRejectionMessage(page), /spam/i)
+      await page.setContent("<p>We couldn't submit your application.</p><p>Your application submission was flagged as possible spam.</p>")
+      assert.match(await atsRejectionMessage(page), /possible spam/)
+    } finally { await browser.close() }
+  })
 })

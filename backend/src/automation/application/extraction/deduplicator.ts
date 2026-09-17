@@ -1,3 +1,4 @@
+import { fileRole } from '../canonicalIdentity.js'
 import { isOptionOnlyLabel } from './fieldNormalizer.js'
 import type { ExtractedControl } from './types.js'
 
@@ -47,11 +48,12 @@ export function dedupeExtractedFields(controls: ExtractedControl[]): ExtractedCo
   }
   const collapsed = [...byFingerprint.values()]
   const hasTelPhone = collapsed.some((control) => control.kind === 'phone' && /phone/i.test(control.question) && !/country/i.test(control.question))
-  const fileKinds = new Set(collapsed.filter((control) => control.kind === 'file').map((control) => /cover/i.test(control.question) ? 'cover_letter' : 'resume'))
+  const fileKinds = new Set(collapsed.filter((control) => control.kind === 'file').map((control) => fileRole(control.question) || 'other_attachment'))
   const filesKept = new Set<string>()
   return collapsed.filter((control) => {
     if (control.kind === 'file') {
-      const key = /cover/i.test(control.question) ? 'cover_letter' : 'resume'
+      const key = fileRole(control.question) || 'other_attachment'
+      if (key === 'other_attachment') return true
       if (filesKept.has(key)) return false
       filesKept.add(key)
       return true

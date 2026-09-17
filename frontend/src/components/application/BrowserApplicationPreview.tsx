@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent, type WheelEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Bot } from 'lucide-react'
 import type { AutomationRun } from './types'
 
@@ -44,7 +44,27 @@ export function BrowserApplicationPreview({ run }: { run: AutomationRun | null }
     return () => { cancelled = true; window.clearInterval(timer); if (currentUrl) URL.revokeObjectURL(currentUrl) }
   }, [run?.id])
 
-  const pointFromEvent = (event: MouseEvent | WheelEvent) => {
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el) return
+    const handleWheel = (event: globalThis.WheelEvent) => {
+      if (!interactive) return
+      if (event.cancelable) event.preventDefault()
+      const image = imageRef.current
+      if (!image) return
+      const box = image.getBoundingClientRect()
+      if (!box.width || !box.height) return
+      const point = {
+        x: Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1),
+        y: Math.min(Math.max((event.clientY - box.top) / box.height, 0), 1)
+      }
+      sendInput({ type: 'scroll', ...point, deltaX: event.deltaX, deltaY: event.deltaY })
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
+  }, [interactive, run?.id])
+
+  const pointFromEvent = (event: MouseEvent) => {
     const image = imageRef.current
     if (!image) return null
     const box = image.getBoundingClientRect()
@@ -69,12 +89,6 @@ export function BrowserApplicationPreview({ run }: { run: AutomationRun | null }
         event.preventDefault()
         const text = event.key.length === 1 && !event.metaKey && !event.ctrlKey ? event.key : undefined
         sendInput({ type: 'key', key: event.key, text })
-      }}
-      onWheel={(event) => {
-        if (!interactive) return
-        event.preventDefault()
-        const point = pointFromEvent(event)
-        if (point) sendInput({ type: 'scroll', ...point, deltaX: event.deltaX, deltaY: event.deltaY })
       }}
     >
       {frameUrl ? (

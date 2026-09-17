@@ -1,6 +1,7 @@
 import type { Page } from 'playwright-core'
 import type { JobDetails } from '../../types.js'
 import { ashbySelectors } from './selectors.js'
+import { warmUpPage, humanPause, bezierMouseMove, naturalScroll, randomInt } from '../../application/stealthHelpers.js'
 
 type AshbyAppData = {
   organization?: { name?: string }
@@ -8,7 +9,7 @@ type AshbyAppData = {
 }
 
 export class AshbyJobPage {
-  constructor(private readonly page: Page) {}
+  constructor(private readonly page: Page) { }
 
   static supports(url: URL) { return url.hostname.toLowerCase() === 'jobs.ashbyhq.com' && url.pathname.split('/').filter(Boolean).length >= 2 }
 
@@ -26,11 +27,15 @@ export class AshbyJobPage {
     const url = new URL(jobUrl)
     if (url.pathname.split('/').filter(Boolean).at(-1) === 'application') {
       await this.page.goto(AshbyJobPage.applicationUrl(url).toString(), { waitUntil: 'domcontentloaded', timeout: 30_000 })
+      // Warm up the page — simulate a real user landing and looking around
+      await warmUpPage(this.page)
       return
     }
 
     await this.page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 30_000 })
     await this.page.locator(ashbySelectors.jobHeading).first().waitFor({ state: 'visible', timeout: 30_000 })
+    // Warm up — read the job posting like a real visitor
+    await warmUpPage(this.page)
     const applyLinks = this.page.locator(ashbySelectors.applyLink).filter({ hasText: /apply/i })
     await applyLinks.first().waitFor({ state: 'attached', timeout: 15_000 })
     const targetIndex = await applyLinks.evaluateAll((links) => {
@@ -40,18 +45,25 @@ export class AshbyJobPage {
     })
     const apply = applyLinks.nth(targetIndex)
 
-    await this.page.mouse.move(850, 620, { steps: 12 })
+    // Natural scroll toward the Apply link with human-like behavior
+    await bezierMouseMove(this.page, randomInt(600, 900), randomInt(400, 600))
     for (let step = 0; step < 30 && !await apply.isVisible(); step += 1) {
-      await this.page.mouse.wheel(0, 420)
-      await this.page.waitForTimeout(this.random(180, 340))
+      await naturalScroll(this.page, randomInt(300, 500), { scrollSteps: randomInt(2, 4) })
+      await humanPause(this.page, 200, 450)
     }
     if (!await apply.isVisible()) {
       await apply.scrollIntoViewIfNeeded()
-      await this.page.waitForTimeout(this.random(400, 750))
+      await humanPause(this.page, 500, 900)
     }
     const box = await apply.boundingBox()
-    if (box) await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 18 })
-    await this.page.waitForTimeout(this.random(450, 900))
+    if (box) {
+      await bezierMouseMove(this.page, box.x + box.width / 2, box.y + box.height / 2, {
+        fromX: box.x - randomInt(100, 250),
+        fromY: box.y - randomInt(60, 150),
+        steps: randomInt(18, 30),
+      })
+    }
+    await humanPause(this.page, 500, 1000)
     await Promise.all([
       this.page.waitForURL(/\/application(?:[/?#]|$)/, { timeout: 20_000 }),
       apply.click(),

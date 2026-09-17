@@ -116,3 +116,12 @@ test('generated Workable names are not used as the canonical question identity',
   assert.equal(questions[0]?.locator.value.startsWith('label:'), true)
   assert.doesNotMatch(questions[0]?.id || '', /input_CA_/)
 })
+
+test('resume deduplication preserves a separate required attachment', () => {
+  const controls = ['Resume', 'CV', 'Upload work sample'].map((question, i): ExtractedControl => ({
+    question, kind: 'file', required: true, visible: true, options: [], name: `file_${i}`, id: `file_${i}`, dataUi: '', answered: false, generatedName: false,
+  }))
+  const fields = dedupeExtractedFields(controls)
+  assert.equal(fields.length, 2)
+  assert.equal(fields[1]?.question, 'Upload work sample')
+})

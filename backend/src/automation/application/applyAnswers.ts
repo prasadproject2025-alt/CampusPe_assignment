@@ -1,6 +1,8 @@
+import { randomInt } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { Page } from 'playwright-core'
+import { answerResolver } from '../../resolver/engine.js'
 import type { AnswerValue } from '../../resolver/types.js'
 import { tailoredResumeDir, uploadDir } from '../../config.js'
 import { db } from '../../database.js'
@@ -8,10 +10,11 @@ import type { EducationRecord, JobBoardAdapter, ResumeUpload } from '../types.js
 import { classifyQuestion, normalizeQuestion } from '../../resolver/normalizer.js'
 import { fileRole } from './canonicalIdentity.js'
 import { AmbiguousFieldError, AnswerRequiresUserError, FieldResolutionError } from './fieldResolution.js'
-import { questionsToFields, fieldToQuestion } from './formModel.js'
+import { questionsToFields } from './formModel.js'
 import { matchCanonicalField } from './matchCanonical.js'
 import { fingerprintsEqual, reconcileCanonicalFields } from './reconcileCanonical.js'
 import type { ApplicationField } from './types.js'
+import { humanDelay } from './stealthHelpers.js'
 
 type ResumeRecord = { resume_storage_name: string | null; resume_filename: string | null; resume_mime: string | null; tailored?: boolean }
 
@@ -36,20 +39,24 @@ function basenameSafe(name: string) {
   return name.replace(/^.*[/\\]/, '')
 }
 
-export async function applyStoredAnswers(adapter: JobBoardAdapter, page: Page, fields: ApplicationField[], userId: string, jobUrl: string) {
+export async function applyStoredAnswers(adapter: JobBoardAdapter, page: Page, fields: ApplicationField[], userId: string, jobUrl: string, preserveLiveAnswers = false) {
   const resume = loadResumeForJob(userId, jobUrl)
   const file = resume ? resumeFile(resume) : null
   const profileEducation = db.prepare('SELECT education_json FROM profiles WHERE user_id=?').get(userId) as { education_json: string } | undefined
   const filled = new Set<string>()
-  const deferred: Error[] = []
+  const resolvedKeys = new Set<string>()
+  const job = profileEducation ? await adapter.extractJob(page, jobUrl) : {}
+  let deferred: Error[] = []
   const MAX_DYNAMIC_ROUNDS = 5
   let schema = fields
   let questions: Awaited<ReturnType<JobBoardAdapter['extractQuestions']>> = []
-  if (file) {
+  const resumePresent = preserveLiveAnswers && (await adapter.extractQuestions(page)).some(q => q.inputType === 'file' && fileRole(q.text) === 'resume' && q.answered)
+  if (file && !resumePresent) {
     await adapter.uploadResume(page, file)
     if (adapter.waitForResumeParsing) await adapter.waitForResumeParsing(page)
   }
   for (let round = 0; round < MAX_DYNAMIC_ROUNDS; round += 1) {
+    deferred = []
     const before = schema
     questions = await adapter.extractQuestions(page)
     schema = reconcileCanonicalFields(schema, questionsToFields(questions))
@@ -62,8 +69,13 @@ export async function applyStoredAnswers(adapter: JobBoardAdapter, page: Page, f
       const field = match.field
       const key = field?.id || `${question.id}::${question.text}`
       if (filled.has(key)) continue
-      if (question.answered && !['radio', 'boolean', 'checkbox', 'checkbox-group', 'radio-group', 'select'].includes(question.inputType || '')) continue
-      if (question.inputType === 'file' && (field?.id === 'file:resume' || fileRole(question.text) === 'resume' || question.id === '_systemfield_resume')) { filled.add(key); continue }
+      if (preserveLiveAnswers && question.answered) { filled.add(key); continue }
+      if (question.answered && classifyQuestion(normalizeQuestion(question.text)) !== 'location' && !['radio', 'boolean', 'checkbox', 'checkbox-group', 'radio-group', 'select'].includes(question.inputType || '')) continue
+      if (question.inputType === 'file' && (field?.id === 'file:resume' || fileRole(question.text) === 'resume' || question.id === '_systemfield_resume')) {
+        if (!file && question.required && !question.answered) deferred.push(new AnswerRequiresUserError(question.text))
+        else filled.add(key)
+        continue
+      }
       if (question.inputType === 'file' && fileRole(question.text) === 'cover_letter') {
         if (question.required) deferred.push(new AnswerRequiresUserError(question.text))
         filled.add(key)
@@ -79,11 +91,33 @@ export async function applyStoredAnswers(adapter: JobBoardAdapter, page: Page, f
         if (question.required) deferred.push(new AnswerRequiresUserError(question.text))
         continue
       }
+      if (adapter.extractQuestionOptions && (question.fieldType === 'select' || question.fieldType === 'boolean') && !question.options?.length) {
+        const options = await adapter.extractQuestionOptions(page, question)
+        if (options.length) question.options = options
+      }
+      if (field && question.options?.length) field.options = question.options
       let value = field?.value.trim()
       if (!value && classifyQuestion(normalizeQuestion(question.text)) === 'phone_country_code') {
         const profile = db.prepare('SELECT phone_country_code FROM profiles WHERE user_id=?').get(userId) as { phone_country_code?: string } | undefined
         value = profile?.phone_country_code?.trim() || ''
       }
+      if (!value && (classifyQuestion(normalizeQuestion(question.text)) === 'location' || question.text.toLowerCase().includes('location'))) {
+        const profile = db.prepare('SELECT location, current_city, current_state, current_country FROM profiles WHERE user_id=?').get(userId) as { location?: string; current_city?: string; current_state?: string; current_country?: string } | undefined
+        value = profile?.location?.trim() || [profile?.current_city, profile?.current_state, profile?.current_country].filter(Boolean).join(', ').trim() || 'San Francisco, CA'
+      }
+      if (!value && field && profileEducation && !resolvedKeys.has(key)) {
+        resolvedKeys.add(key)
+        const resolved = await answerResolver.resolve(userId, question, job)
+        if (resolved.status === 'RESOLVED') {
+          value = String(resolved.answer)
+          field.value = value
+          field.source = resolved.source
+          field.status = 'suggested'
+          field.confidence = resolved.confidence
+          field.reason = resolved.explanation
+        }
+      }
+
       if (!value) {
         if (question.required && match.status === 'NOT_FOUND') {
           deferred.push(new FieldResolutionError(question.id, question.text))
@@ -95,12 +129,12 @@ export async function applyStoredAnswers(adapter: JobBoardAdapter, page: Page, f
         }
         continue
       }
-      if (adapter.extractQuestionOptions && (question.fieldType === 'select' || question.fieldType === 'boolean') && !question.options?.length) {
-        const options = await adapter.extractQuestionOptions(page, question)
-        if (options.length) question.options = options
-      }
+
       try {
-        await adapter.fillAnswer(page, field ? fieldToQuestion({ ...field, value }) : question, value as AnswerValue)
+        // Per-step pacing: Gaussian-distributed delay to simulate reading
+        // the question label and thinking before answering.
+        await page.waitForTimeout(humanDelay(600, 2200))
+        await adapter.fillAnswer(page, question, value as AnswerValue)
       } catch (error) {
         if (error instanceof AnswerRequiresUserError || error instanceof AmbiguousFieldError || error instanceof FieldResolutionError) {
           deferred.push(error)
@@ -117,8 +151,22 @@ export async function applyStoredAnswers(adapter: JobBoardAdapter, page: Page, f
     }
     const latest = await adapter.extractQuestions(page)
     const next = reconcileCanonicalFields(schema, questionsToFields(latest))
-    if (fingerprintsEqual(before, next)) break
+    const stable = fingerprintsEqual(before, next)
     schema = next
+    if (stable) break
   }
-  if (deferred.length) throw deferred[0]
+  fields.splice(0, fields.length, ...schema)
+  if (deferred.length) {
+    // In assisted mode, FIELD_NOT_FOUND errors are non-fatal — the user can complete
+    // unresolvable fields manually in the assisted browser. Only throw if there are
+    // errors that truly require user attention (ANSWER_REQUIRES_USER, AMBIGUOUS_FIELD).
+    if (preserveLiveAnswers) {
+      const blocking = deferred.filter(err => !(err instanceof FieldResolutionError))
+      if (blocking.length) throw blocking[0]
+      // All remaining are FIELD_NOT_FOUND — let the assisted session proceed
+      // so the user sees the form with all fillable fields already populated.
+      return
+    }
+    throw deferred[0]
+  }
 }

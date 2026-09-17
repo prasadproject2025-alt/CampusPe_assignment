@@ -35,12 +35,33 @@ cd ..
 npm run dev
 ```
 
-This starts both services:
+This starts:
 
 - Frontend: `http://localhost:5173`
 - Backend API: `http://127.0.0.1:3001`
+- Ollama, if `ollama` is installed (used for resume analysis and drafted answers)
 
 If port 5173 is occupied, Vite automatically selects the next free port (5174, 5175, etc.). Use the URL printed beside `WEB` in the terminal.
+
+If Ollama is not installed, the API and web app still start. Resume analysis and AI drafts need Ollama in a separate terminal:
+
+```bash
+ollama serve
+ollama pull gemma3:4b
+```
+
+Then keep `ollama serve` running and start the app:
+
+```bash
+# Terminal 1
+ollama serve
+
+# Terminal 2
+cd backend && npm run dev
+
+# Terminal 3
+cd frontend && npm run dev
+```
 
 ### Stop the Application
 
@@ -52,7 +73,7 @@ Press `Ctrl+C` in the terminal running `npm run dev`.
 - Local account and reusable application profile
 - Resume upload, preview, review, job matching, and optimization suggestions
 - Visible-browser application automation with human-in-the-loop control
-- Pause, continue, review-before-submit, auto-submit, and testing modes
+- Pause, continue, assisted submission, and testing modes
 - Three-layer answer resolution: profile, approved memory, then local AI
 - Exact-option matching for dropdowns, radios, checkboxes, and searchable selects
 - Application adapters for Ashby, Greenhouse, Rippling, Breezy, Lever, Workable, BambooHR, and Recruitee
@@ -298,7 +319,7 @@ All directories are created with restrictive permissions (mode 0o700).
 2. Paste a supported ATS job URL
 3. Choose submission mode:
    - **Submit with approval** (default): Fills form, stops for review before submission
-   - **Auto-submit**: Submits after filling (requires explicit configuration)
+   - **Assisted submission**: The user clicks Submit on the filled employer form
 4. Click "Start application"
 5. A visible Chrome window opens and automation begins
 
@@ -319,7 +340,7 @@ The automation intentionally pauses when:
 - **Missing required information**: Add the missing data to your profile or provide it manually
 - **Sensitive questions**: Demographic, visa, or other protected questions may pause for explicit user input
 - **Uncertain answers**: When confidence is low, the system pauses for user approval
-- **Final review**: Always stops at READY_FOR_REVIEW unless auto-submit is explicitly enabled
+- **Final review**: Always stops at READY_FOR_REVIEW before the user submits in the assisted browser
 
 **Important:** CAPTCHA and login challenges are NOT solved automatically. Human intervention is required.
 
@@ -557,6 +578,31 @@ ollama list
 curl http://127.0.0.1:11434/api/tags
 ```
 
+Start it:
+
+```bash
+ollama serve
+ollama pull gemma3:4b
+```
+
+The backend prints `Ollama ready` or a missing-model warning when it starts.
+
+### Employer flagged the application as spam
+
+Ashby (and other boards) can reject automated browsers. JobCopilot cannot bypass that filter.
+
+Typical causes:
+- Location or another required field was not a unique live option, so the live form was incomplete
+- Several automated submits in a short time
+- VPN or bot-like traffic
+
+What to do:
+1. Complete Location in the assisted preview (type the city until one suggestion remains, then select it).
+2. Do not click Submit until required fields are filled.
+3. Wait before retrying the same Ashby job.
+4. Turn off a VPN if you use one.
+5. Treat a spam banner as a failed submit, not as success. JobCopilot will stop verifying instead of hanging.
+
 ### ATS Page Changed
 
 Job boards may update HTML structure. Symptoms:
@@ -635,7 +681,7 @@ cd ../backend && npm install
 
 ### Final Submission
 
-The application does **not** silently submit applications in the default configuration. Human review and approval are required unless auto-submit is explicitly enabled.
+The application does **not** silently submit applications in the default configuration. The final Submit is controlled by the user in the assisted browser.
 
 CAPTCHA, login, and manual-input situations always require human intervention.
 
@@ -649,3 +695,39 @@ CAPTCHA, login, and manual-input situations always require human intervention.
 - Resume optimization produces a new Word document and does not preserve original PDF/LaTeX visual templates
 
 These constraints are deliberate and should be revisited before turning CampusPe into a hosted multi-user service.
+
+### Automation stabilization (September 2026)
+
+The backend owns matching, answer policy, live filling, validation, and confirmation. Public schemas provide the native review form; the live ATS controls are authoritative when applying reviewed answers. The existing adapters remain in place. There is no Chrome extension or second automation engine.
+
+Each browser worker launches installed Google Chrome in modern headless mode (`channel: 'chrome', headless: true`) with a fresh temporary profile and browser context. Install Chrome in its standard location on the backend host before running automation; the launcher does not fall back to headless shell or reuse personal browser sessions. Submission hands its existing page to assisted mode for missing answers, ambiguous controls, CAPTCHA, or login. Extraction-time blockers also retain their page. Assisted mode checks the live required fields when the user requests Submit, and never automatically retries after CAPTCHA. Its preview transports input to that retained page; employer application iframes are disabled.
+
+Ollama is restricted to narrative questions. Profile/resume and approved answers take priority; factual and choice questions without evidence require user input. Live reconciliation drops removed fields and uses current locators. A navigation or success-looking URL alone is not confirmation.
+
+The status display maps backend and assisted-session states to PREPARING, FILLING, REVIEW, USER_ACTION_REQUIRED, SUBMITTING, VERIFYING, SUBMITTED, or FAILED. Backend errors take precedence over readiness.
+
+Run `npm run build` and `npm test` to verify. The stabilization browser tests require installed Google Chrome and intentionally fail rather than silently skip when it cannot launch. Tests use local fixtures; passing them does not establish that a real employer accepted a submission. Browser capacity remains dependent on host memory and CPU; these checks do not constitute a production volume benchmark.
+
+### India discovery and one-click auto apply
+
+Discovery defaults to India across the Ashby, Greenhouse, Lever, and Workable feeds; select **All countries** to widen the search. Workable city/country fields are normalized, and unknown-location remote jobs are not assumed eligible from India. Partial feed failures are shown without discarding available jobs.
+
+Click **Assisted apply** on a job card to prepare that application for the assisted browser. Saved facts take priority; newly revealed narrative questions can use contextual Ollama drafts. Pasting a link does not submit it until you click the action. Genuine missing facts and employer protection challenges can still require your input. A spam rejection is shown without guessing its cause or suggesting repeated submissions.
+
+Application history now has **View application** to reopen a saved run without starting another application. Poll responses cannot replace a different selected run. On API restart, lost active workers are marked interrupted; potentially sent applications are never automatically retried.
+
+Greenhouse discovery retains the employer's job-description link while passing the canonical ATS job link to automation. If that ATS link redirects, the existing adapter follows the employer's visible Apply link and opens the published Greenhouse form URL as the top-level page, preserving any employer-provided validity token. Non-resume attachments remain separate and cannot be satisfied by the saved resume.
+
+Read-only live verification on September 9, 2026 covered two India postings per portal: Databricks and Stripe (Greenhouse), two D&B research roles (Lever), two Exponent Energy graduate roles (Workable), and Ema plus Notion (Ashby). All eight live forms were reached and extracted after the redirect fixes; both Greenhouse forms exposed passive invisible-reCAPTCHA badges. Those badges are no longer mistaken for interactive challenges; actual challenges still require the user. The signed-in UI was checked for discovery, profile display, saved-run reopening, and a non-submitting test run. This verification did not send or confirm a real employer application.
+
+Review-form regressions: `npm run build` followed by `node backend/scripts/test-review-ui.mjs` checks older approval and auto-submit saved runs in installed Chrome; both now use only assisted handoff, with all API/employer traffic mocked. It checks multi-choice selection, radio/select editing, the shared phone-country selector, and delayed answer saves immediately followed by Continue/assisted handoff. No employer application is sent.
+
+Answer saves are serialized per run and finish before Continue, Submit, or assisted handoff. Local edits are preserved across status refreshes. Duplicate submission requests return the existing run; state conflicts return a descriptive 409 response. An explicit spam rejection cannot reopen an assisted session, and generic employer errors are no longer labeled spam.
+
+Submission timeout handling preserves the original browser in assisted observation mode, without refilling or replaying Submit. Late ATS confirmations are still detected. Visible post-submit field errors are reported as user input rather than a generic timeout. If the original session was lost, the uncertain attempt cannot be replayed automatically.
+
+For a future diagnostic run, set `AUTOMATION_TRACE=1` in the backend environment. Traces are saved locally to `data/traces/<run-id>.zip` (ignored by Git). Open one with `npx playwright show-trace /absolute/path/to/trace.zip` from `backend`. Traces can contain applicant form data; they are not uploaded. The timeout regression creates a synthetic-data trace at `/tmp/jobcopilot-submission-timeout.zip` and tests late confirmation without a second submission.
+
+Assisted-only mode: new runs ignore the legacy auto-submit flag. Both legacy Submit endpoints hand off to the existing assisted session. Automatic filling pauses for a random 300–900 ms between answers; the user’s final Submit click is not randomized or replayed. This pacing does not bypass employer protections or guarantee acceptance.
+
+The assisted side panel now offers **Submit application** after the live page is ready. This explicit user action re-extracts the same page, fills missing safe answers while preserving live edits, validates, and invokes the existing ATS submit adapter once. Concurrent clicks and uncertain timeouts cannot replay submission. Success still requires ATS confirmation. Lever résumé validation recognizes its uploaded storage ID/success state even when the file input is reset.

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { automationBrowserExecutable, launchHeadlessAutomationBrowser, runWithBrowserPermit } from './browserLauncher.js'
+import { launchHeadlessAutomationBrowser, runWithBrowserPermit } from './browserLauncher.js'
 import { getRunPreview, startRunPreview, stopRunPreview, automationViewport } from './preview.js'
 
 test('uses a fixed in-app viewport for the live application preview', () => {
@@ -8,30 +8,20 @@ test('uses a fixed in-app viewport for the live application preview', () => {
   assert.equal(automationViewport.height, 800)
 })
 
-test('never launches Google Chrome.app or Chrome for Testing', (t) => {
-  let executable: string
-  try {
-    executable = automationBrowserExecutable()
-  } catch (error) {
-    t.skip(`Headless shell is not available here: ${error instanceof Error ? error.message : error}`)
-    return
-  }
-  assert.match(executable, /chrome-headless-shell/)
-  assert.doesNotMatch(executable, /Google Chrome\.app/)
-  assert.doesNotMatch(executable, /Google Chrome for Testing\.app/)
-})
-
-test('captures JPEG frames from windowless headless-shell', async (t) => {
-  let launched: Awaited<ReturnType<typeof launchHeadlessAutomationBrowser>>
-  try {
-    launched = await runWithBrowserPermit('test', () => launchHeadlessAutomationBrowser())
-  } catch (error) {
-    t.skip(`Headless shell is not available here: ${error instanceof Error ? error.message : error}`)
-    return
-  }
+test('installed Chrome runs headlessly with a temporary profile and captures JPEG frames', async () => {
+  const launched = await runWithBrowserPermit('test', launchHeadlessAutomationBrowser)
   const { browser, context } = launched
   try {
     const page = await context.newPage()
+    await page.goto('chrome://version')
+    const executable = await page.locator('#executable_path').innerText()
+    const profile = await page.locator('#profile_path').innerText()
+    const commandLine = await page.locator('#command_line').innerText()
+    assert.match(commandLine, /--headless(?:[=\s]|$)/)
+    assert.match(profile, /playwright_chromiumdev_profile-/)
+    assert.match(executable, /Google Chrome|google-chrome|chrome.exe/)
+    assert.doesNotMatch(executable, /headless-shell/)
+    await page.goto('about:blank')
     await page.setContent('<html><body style="background:#5a55d6;color:#fff;font:700 48px sans-serif"><h1>Phone</h1></body></html>')
     await startRunPreview('preview-test', page)
     const preview = getRunPreview('preview-test')

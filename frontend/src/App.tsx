@@ -1,3 +1,4 @@
+import { applicationState } from './components/application/statusCopy'
 import { useEffect, useRef, useState } from 'react'
 import { apiRequest, ApiError, type Education, type RecommendedJob, type StoredProfile, type WorkExperience } from './api'
 import { LiveApplication } from './components/application/LiveApplication'
@@ -43,7 +44,7 @@ type DashboardTab = 'discover' | 'resume' | 'auto-apply' | 'applications'
 type ResumeReview = { score: number; summary: string; strengths: string[]; tips: Array<{ priority: 'high' | 'medium' | 'low'; title: string; detail: string }>; matchedKeywords?: string[]; missingKeywords?: string[] }
 type ResumeTargetJob = { url: string; board: string; title: string; company: string; location: string; description: string }
 type ResumeOptimization = { id: string; mode: 'review' | 'automatic'; status: 'DRAFT' | 'APPROVED'; job: { url: string; title: string; company: string; location: string }; proposal: { originalScore: number; optimizedScore: number; headline: string; changes: Array<{ section: string; before: string; after: string; reason: string }>; tailoredResumeText: string; safetyNote: string } }
-type JobsResponse = { data: { jobs: RecommendedJob[]; sources: Array<{ source: RecommendedJob['source']; jobs: number }>; pagination: { offset: number; limit: number; total: number; hasMore: boolean } } }
+type JobsResponse = { data: { jobs: RecommendedJob[]; sources: Array<{ source: RecommendedJob['source']; jobs: number; failed: number }>; pagination: { offset: number; limit: number; total: number; hasMore: boolean } } }
 
 const roles = [
   { company: 'Linear', role: 'Frontend Engineer', meta: 'Remote · Product', match: '96%', color: '#5e6ad2' },
@@ -109,7 +110,7 @@ function AuthModal({ mode, onClose, onSwitch, onComplete }: { mode: Exclude<Auth
           {!isLogin && (
             <label>
               Full name
-              <input name="name" type="text" autoComplete="name" placeholder="Aryan Singh" required />
+              <input name="name" type="text" autoComplete="name" placeholder="Arjit Singh" required />
             </label>
           )}
           <label>
@@ -287,7 +288,6 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
   const [automationRun, setAutomationRun] = useState<AutomationRun | null>(null)
   const [automationError, setAutomationError] = useState('')
   const [automationLoading, setAutomationLoading] = useState(false)
-  const [autoSubmit, setAutoSubmit] = useState(false)
   const [testMode, setTestMode] = useState(false)
   const [applicationRuns, setApplicationRuns] = useState<AutomationRun[]>([])
   const [applicationFilter, setApplicationFilter] = useState<'all' | 'applied' | 'active' | 'attention' | 'failed'>('all')
@@ -304,6 +304,8 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
   const [savedJobs, setSavedJobs] = useState<RecommendedJob[]>([])
   const [savingJobIds, setSavingJobIds] = useState<Set<string>>(new Set())
   const [saveMessage, setSaveMessage] = useState('')
+  const [jobFeedFailures, setJobFeedFailures] = useState(0)
+  const [jobCountry, setJobCountry] = useState<'india' | 'all'>('india')
   const [jobSearch, setJobSearch] = useState('')
   const [jobBoard, setJobBoard] = useState<'all' | RecommendedJob['source']>('all')
   const [jobFilter, setJobFilter] = useState<'newest' | 'remote' | 'saved'>('newest')
@@ -323,7 +325,7 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
   const todayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
 
   const jobsRequestPath = (offset: number) => {
-    const parameters = new URLSearchParams({ offset: String(offset), limit: '24', board: jobBoard, remote: String(jobFilter === 'remote') })
+    const parameters = new URLSearchParams({ offset: String(offset), limit: '24', board: jobBoard, country: jobCountry, remote: String(jobFilter === 'remote') })
     if (jobSearch.trim()) parameters.set('q', jobSearch.trim())
     return `/api/jobs/recommended?${parameters}`
   }
@@ -332,11 +334,12 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
     if (jobFilter === 'saved') { setJobsLoading(false); return }
     let cancelled = false
     const timer = window.setTimeout(() => {
-      setJobsLoading(true); setJobsError(''); setJobs([]); setJobsHasMore(false)
+      setJobsLoading(true); setJobFeedFailures(0); setJobsError(''); setJobs([]); setJobsHasMore(false)
       apiRequest<JobsResponse>(jobsRequestPath(0), { cache: 'no-store' })
         .then((result) => {
           if (cancelled) return
           setJobs(result.data.jobs); setJobsHasMore(result.data.pagination.hasMore); setJobsMatchingTotal(result.data.pagination.total)
+          setJobFeedFailures(result.data.sources.reduce((sum, source) => sum + source.failed, 0))
           setJobSourceCount(result.data.sources.filter((source) => source.jobs > 0).length)
           setTotalJobCount(result.data.sources.reduce((total, source) => total + source.jobs, 0))
           setJobTotalsByBoard(Object.fromEntries(result.data.sources.map((source) => [source.source, source.jobs])))
@@ -345,7 +348,7 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
         .finally(() => { if (!cancelled) setJobsLoading(false) })
     }, jobSearch.trim() ? 250 : 0)
     return () => { cancelled = true; window.clearTimeout(timer) }
-  }, [jobBoard, jobFilter, jobSearch])
+  }, [jobBoard, jobCountry, jobFilter, jobSearch])
 
   useEffect(() => {
     apiRequest<{ data: { jobs: RecommendedJob[] } }>('/api/jobs/saved')
@@ -360,6 +363,25 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
   }, [])
 
   useEffect(() => {
+    if (tab !== 'applications') return
+    let cancelled = false
+    let refreshing = false
+    const refresh = async () => {
+      if (refreshing) return
+      refreshing = true
+      try {
+        const result = await apiRequest<{ data: { runs: AutomationRun[] } }>('/api/automation/runs')
+        if (!cancelled) { setApplicationRuns(result.data.runs); setAutomationError('') }
+      } catch (error) {
+        if (!cancelled) setAutomationError(error instanceof Error ? error.message : 'Could not refresh applications.')
+      } finally { refreshing = false }
+    }
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), 5000)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [tab])
+
+  useEffect(() => {
     if (automationRun) setApplicationRuns((runs) => [automationRun, ...runs.filter((run) => run.id !== automationRun.id)])
   }, [automationRun])
 
@@ -370,18 +392,18 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
   }, [])
 
   const normalizedJobSearch = jobSearch.trim().toLowerCase()
-  const filteredSavedJobs = savedJobs.filter((job) => (jobBoard === 'all' || job.source === jobBoard) && (!normalizedJobSearch || [job.title, job.company, job.location, job.department, job.source, job.workplaceType, job.employmentType, ...job.skills].filter(Boolean).join(' ').toLowerCase().includes(normalizedJobSearch)))
+  const filteredSavedJobs = savedJobs.filter((job) => (jobCountry === 'all' || job.countryCode === 'IN') && (jobBoard === 'all' || job.source === jobBoard) && (!normalizedJobSearch || [job.title, job.company, job.location, job.department, job.source, job.workplaceType, job.employmentType, ...job.skills].filter(Boolean).join(' ').toLowerCase().includes(normalizedJobSearch)))
   const visibleJobs = jobFilter === 'saved' ? filteredSavedJobs : jobs
   const displayedJobs = jobFilter === 'saved' ? visibleJobs.slice(0, visibleJobLimit) : visibleJobs
   const displayedOpenRoleCount = jobBoard === 'all' ? totalJobCount : jobTotalsByBoard[jobBoard] || 0
   const submittedRunCount = applicationRuns.filter((run) => run.status === 'SUBMITTED').length
-  const actionableRunCount = applicationRuns.filter((run) => ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW'].includes(run.status)).length
-  const runStatus = (status: AutomationRun['status']) => status === 'SUBMITTED' ? ['Applied', 'applied'] : status === 'READY_FOR_REVIEW' ? ['Ready for review', 'review'] : status.startsWith('PAUSED_') ? ['Needs input', 'review'] : status === 'FAILED' ? ['Failed', 'failed'] : ['In progress', 'draft']
+  const actionableRunCount = applicationRuns.filter((run) => applicationState(run) !== 'FAILED' && ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW'].includes(run.status)).length
+  const runStatus = (run: AutomationRun) => applicationState(run) === 'FAILED' ? ['Failed', 'failed'] : run.status === 'SUBMITTED' ? ['Applied', 'applied'] : run.status === 'READY_FOR_REVIEW' ? ['Ready for review', 'review'] : run.status.startsWith('PAUSED_') ? ['Needs input', 'review'] : run.status === 'FAILED' ? ['Failed', 'failed'] : ['In progress', 'draft']
   const applicationGroups = {
     applied: (run: AutomationRun) => run.status === 'SUBMITTED',
     active: (run: AutomationRun) => ['QUEUED', 'OPENING_JOB', 'EXTRACTING_JOB', 'FILLING_APPLICATION', 'SUBMITTING'].includes(run.status),
-    attention: (run: AutomationRun) => ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW'].includes(run.status),
-    failed: (run: AutomationRun) => run.status === 'FAILED',
+    attention: (run: AutomationRun) => applicationState(run) !== 'FAILED' && ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW'].includes(run.status),
+    failed: (run: AutomationRun) => applicationState(run) === 'FAILED',
   }
   const filteredApplicationRuns = applicationFilter === 'all' ? applicationRuns : applicationRuns.filter(applicationGroups[applicationFilter])
   const selectJobFilter = (filter: 'newest' | 'remote' | 'saved') => { setJobFilter(filter); setVisibleJobLimit(24) }
@@ -416,23 +438,39 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
 
   useEffect(() => {
     const assistedActive = Boolean(automationRun?.assistedSession && !['SUBMITTED', 'FAILED', 'EXPIRED', 'CANCELLED'].includes(automationRun.assistedSession.status))
-    if (!automationRun || (!assistedActive && ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW', 'SUBMITTED', 'FAILED'].includes(automationRun.status))) return
+    const autoSubmitPending = automationRun?.status === 'READY_FOR_REVIEW' && automationRun.autoSubmit && !automationRun.testMode
+    if (!automationRun || (!assistedActive && !autoSubmitPending && ['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW', 'SUBMITTED', 'FAILED'].includes(automationRun.status))) return
+    let cancelled = false
+    let polling = false
     const timer = window.setInterval(async () => {
+      if (polling) return
+      polling = true
       try {
         const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}`)
-        setAutomationRun(result.data.run)
-      } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not read the automation status.') }
-    }, 1000)
-    return () => window.clearInterval(timer)
+        if (!cancelled) setAutomationRun((current) => current?.id === result.data.run.id ? result.data.run : current)
+      } catch (error) { if (!cancelled) setAutomationError(error instanceof Error ? error.message : 'Could not read the automation status.') }
+      finally { polling = false }
+    }, 1500)
+    return () => { cancelled = true; window.clearInterval(timer) }
   }, [automationRun?.id, automationRun?.status, automationRun?.assistedSession?.status])
 
-  const startAutomation = async (url = jobUrl) => {
+  const openApplicationRun = async (run: AutomationRun) => {
+    setTab('auto-apply')
+    setJobUrl(run.jobUrl)
+    setAutomationError('')
+    setAutomationRun(run)
+    try {
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${run.id}`)
+      setAutomationRun((current) => current?.id === run.id ? result.data.run : current)
+    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not load this application.') }
+  }
+
+  const startAutomation = async (url = jobUrl, previewOnly = testMode) => {
     const normalizedUrl = url.trim()
     if (!normalizedUrl || automationLoading) return
-    if (!testMode && autoSubmit && !window.confirm('Auto-submit will send the completed application to the employer without a final review step. Continue?')) return
     setAutomationError(''); setAutomationLoading(true)
     try {
-      const result = await apiRequest<{ data: { run: AutomationRun } }>('/api/applications/inspect', { method: 'POST', body: JSON.stringify({ jobUrl: normalizedUrl, autoSubmit: testMode ? false : autoSubmit, testMode }) })
+      const result = await apiRequest<{ data: { run: AutomationRun } }>('/api/applications/inspect', { method: 'POST', body: JSON.stringify({ jobUrl: normalizedUrl, autoSubmit: false, testMode: previewOnly }) })
       setAutomationRun(result.data.run)
     } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not start the application.') }
     finally { setAutomationLoading(false) }
@@ -452,37 +490,56 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
     if (!automationRun) return
     setAutomationError(''); setAutomationLoading(true)
     try {
+      await answerSaves.current.get(automationRun.id)
       const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}/resume`, { method: 'POST' })
       setAutomationRun(result.data.run)
     } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not continue the application.') }
     finally { setAutomationLoading(false) }
   }
 
-  const submitAutomation = async () => {
-    if (!automationRun || !window.confirm('Submit this application to the employer? This cannot be undone.')) return
-    setAutomationError(''); setAutomationLoading(true)
-    try {
-      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/applications/${automationRun.id}/submit`, { method: 'POST' })
-      setAutomationRun(result.data.run)
-    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not submit the application.') }
-    finally { setAutomationLoading(false) }
-  }
+  const answerSaves = useRef(new Map<string, Promise<void>>())
 
   const updateAutomationAnswers = async (fields: Array<{ id: string; value: string }>) => {
     if (!automationRun || !fields.length) return
-    try {
-      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/applications/${automationRun.id}/answers`, { method: 'PATCH', body: JSON.stringify({ fields }) })
-      setAutomationRun(result.data.run)
-    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not save the form answers.') }
+    const runId = automationRun.id
+    const save = (answerSaves.current.get(runId) || Promise.resolve()).catch(() => undefined).then(async () => {
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/applications/${runId}/answers`, { method: 'PATCH', body: JSON.stringify({ fields }) })
+      setAutomationRun(current => current?.id === runId ? result.data.run : current)
+    })
+    answerSaves.current.set(runId, save)
+    try { await save }
+    catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not save the form answers.') }
   }
 
   const startAssistedBrowser = async () => {
     if (!automationRun || automationLoading) return
     setAutomationError(''); setAutomationLoading(true)
     try {
+      await answerSaves.current.get(automationRun.id)
       const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}/assisted`, { method: 'POST' })
       setAutomationRun(result.data.run)
     } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not start the assisted browser.') }
+    finally { setAutomationLoading(false) }
+  }
+
+  const submitAssistedBrowser = async () => {
+    if (!automationRun || automationLoading) return
+    setAutomationError(''); setAutomationLoading(true)
+    try {
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/automation/runs/${automationRun.id}/assisted/submit`, { method: 'POST' })
+      setAutomationRun(result.data.run)
+    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not submit the assisted form.') }
+    finally { setAutomationLoading(false) }
+  }
+
+  const submitApplication = async () => {
+    if (!automationRun || automationLoading) return
+    setAutomationError(''); setAutomationLoading(true)
+    try {
+      await answerSaves.current.get(automationRun.id)
+      const result = await apiRequest<{ data: { run: AutomationRun } }>(`/api/applications/${automationRun.id}/submit`, { method: 'POST' })
+      setAutomationRun(result.data.run)
+    } catch (error) { setAutomationError(error instanceof Error ? error.message : 'Could not submit the application.') }
     finally { setAutomationLoading(false) }
   }
 
@@ -558,17 +615,18 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
                 <article><span className="stat-icon green"><FileCheck2 /></span><div><strong>{applicationRuns.length}</strong><small>Applications</small></div><em>{submittedRunCount} submitted</em></article>
                 <article><span className="stat-icon orange"><Bookmark /></span><div><strong>{savedJobs.length}</strong><small>Saved roles</small></div><em>{savedJobs.length ? 'Ready to revisit' : 'Save roles to compare'}</em></article>
               </section>
-              <section className="dashboard-section-header"><div><h2>Recommended for you</h2><p>Live openings from Ashby, Greenhouse, Lever, and Workable</p></div><div className="job-discovery-filters"><label className="job-board-filter"><span>Job board</span><select value={jobBoard} onChange={(event) => { setJobBoard(event.target.value as typeof jobBoard); setJobFilter('newest'); setVisibleJobLimit(24) }}><option value="all">All boards</option><option value="ashby">Ashby</option><option value="greenhouse">Greenhouse</option><option value="lever">Lever</option><option value="workable">Workable</option></select></label><div className="job-filter-pills"><button className={jobFilter === 'newest' ? 'active' : ''} onClick={() => selectJobFilter('newest')}>Newest</button><button className={jobFilter === 'remote' ? 'active' : ''} onClick={() => selectJobFilter('remote')}>Remote</button><button className={jobFilter === 'saved' ? 'active' : ''} onClick={() => selectJobFilter('saved')}>Saved ({savedJobs.length})</button></div></div></section>
+              <section className="dashboard-section-header"><div><h2>Recommended for you</h2><p>{jobCountry === 'india' ? 'India openings' : 'Live openings'} from Ashby, Greenhouse, Lever, and Workable</p></div><div className="job-discovery-filters"><label className="job-board-filter"><span>Location</span><select value={jobCountry} onChange={event => setJobCountry(event.target.value as 'india' | 'all')}><option value="india">India</option><option value="all">All countries</option></select></label><label className="job-board-filter"><span>Job board</span><select value={jobBoard} onChange={(event) => { setJobBoard(event.target.value as typeof jobBoard); setJobFilter('newest'); setVisibleJobLimit(24) }}><option value="all">All boards</option><option value="ashby">Ashby</option><option value="greenhouse">Greenhouse</option><option value="lever">Lever</option><option value="workable">Workable</option></select></label><div className="job-filter-pills"><button className={jobFilter === 'newest' ? 'active' : ''} onClick={() => selectJobFilter('newest')}>Newest</button><button className={jobFilter === 'remote' ? 'active' : ''} onClick={() => selectJobFilter('remote')}>Remote</button><button className={jobFilter === 'saved' ? 'active' : ''} onClick={() => selectJobFilter('saved')}>Saved ({savedJobs.length})</button></div></div></section>
               <div className="dashboard-job-list">
                 {saveMessage && <p className="save-job-message" role="status">{saveMessage}</p>}
                 {jobsLoading && <p className="jobs-message" role="status">Loading live jobs…</p>}
                 {jobsError && <p className="jobs-message error" role="alert">{jobsError}</p>}
+                {!jobsLoading && jobFeedFailures > 0 && jobFilter !== 'saved' && <p className="jobs-message" role="status">Some employer feeds could not be reached. Showing available openings.</p>}
                 {!jobsLoading && !jobsError && !visibleJobs.length && <p className="jobs-message">{normalizedJobSearch ? `No roles match “${jobSearch.trim()}” on ${jobBoard === 'all' ? 'the selected boards' : jobBoard}. Try another title, company, location, or skill.` : jobFilter === 'saved' ? `You have no saved roles${jobBoard === 'all' ? '' : ` from ${jobBoard}`}.` : `No ${jobFilter === 'remote' ? 'remote ' : ''}roles are available from ${jobBoard === 'all' ? 'the selected boards' : jobBoard} right now.`}</p>}
                 {displayedJobs.map((job, index) => (
                   <article className="dashboard-job-card" key={job.id}>
                     <span className="dashboard-company-logo" style={{ background: ['#5e6ad2', '#3866e8', '#e95820', '#1e8e6e'][index % 4] }}>{job.company[0]}</span>
                     <div className="dashboard-job-info"><div className="job-title-row"><h3>{job.title}</h3>{job.workplaceType === 'Remote' && <span className="match-badge"><Sparkles /> Remote</span>}</div><p>{job.company} <span>·</span> <MapPin /> {job.location} <span>·</span> {job.employmentType}</p><div className="skill-tags"><span>{job.source[0].toUpperCase() + job.source.slice(1)}</span>{job.skills.map((skill) => <span key={skill}>{skill}</span>)}</div></div>
-                    <div className="job-card-actions"><button className={`icon-button save-job-button ${savedJobs.some((savedJob) => savedJob.id === job.id) ? 'saved' : ''}`} disabled={savingJobIds.has(job.id)} aria-pressed={savedJobs.some((savedJob) => savedJob.id === job.id)} aria-label={`${savedJobs.some((savedJob) => savedJob.id === job.id) ? 'Remove' : 'Save'} ${job.title} at ${job.company}`} onClick={() => void toggleSavedJob(job)}><Bookmark /></button><strong>{job.salary || job.department || 'Open role'}</strong><a className="button secondary" href={job.jobUrl} target="_blank" rel="noreferrer">View role <ArrowRight /></a></div>
+                    <div className="job-card-actions"><button className={`icon-button save-job-button ${savedJobs.some((savedJob) => savedJob.id === job.id) ? 'saved' : ''}`} disabled={savingJobIds.has(job.id)} aria-pressed={savedJobs.some((savedJob) => savedJob.id === job.id)} aria-label={`${savedJobs.some((savedJob) => savedJob.id === job.id) ? 'Remove' : 'Save'} ${job.title} at ${job.company}`} onClick={() => void toggleSavedJob(job)}><Bookmark /></button><strong>{job.salary || job.department || 'Open role'}</strong><button className="button primary" disabled={automationLoading} onClick={() => { setJobUrl(job.applyUrl); setTestMode(false); setTab('auto-apply'); void startAutomation(job.applyUrl, false) }}>Assisted apply <Send /></button><a className="button secondary" href={job.jobUrl} target="_blank" rel="noreferrer">View role <ArrowRight /></a></div>
                   </article>
                 ))}
                 {((jobFilter === 'saved' && visibleJobLimit < visibleJobs.length) || (jobFilter !== 'saved' && jobsHasMore)) && <button className="button secondary jobs-load-more" disabled={jobsLoadingMore} onClick={() => void loadMoreJobs()}>{jobsLoadingMore ? 'Loading…' : `Load more roles (${displayedJobs.length} of ${jobFilter === 'saved' ? visibleJobs.length : jobsMatchingTotal})`} <ChevronDown /></button>}
@@ -593,22 +651,22 @@ function DashboardPage({ profile, onProfile, onHome }: { profile: ProfileSeed; o
 
           {tab === 'auto-apply' && (
             <section className="auto-apply-page">
-              <div className="dashboard-page-title"><p className="eyebrow">Guided automation</p><h1>Apply from a job link</h1><p>JobCopilot opens the application inside this page. Greenhouse uses a native form. Ashby uses a native form backed by a windowless browser. Other boards use a headless preview. Google Chrome never opens.</p></div>
-              <label className="consent-row testing-mode-toggle"><input type="checkbox" checked={testMode} onChange={(event) => { setTestMode(event.target.checked); if (event.target.checked) setAutoSubmit(false) }} /><span><strong>Testing mode</strong><small>Allows test answers so you can watch the complete filling flow. Submission is always disabled.</small></span></label>
+              <div className="dashboard-page-title"><p className="eyebrow">Guided automation</p><h1>Apply from a job link</h1><p>Prepare an application from your profile and resume. Review the completed form, then submit it here or use the assisted browser when an employer requires a manual step.</p></div>
+              <label className="consent-row testing-mode-toggle"><input type="checkbox" checked={testMode} onChange={(event) => { setTestMode(event.target.checked); }} /><span><strong>Testing mode</strong><small>Allows test answers so you can watch the complete filling flow. Submission is always disabled.</small></span></label>
               <div className="auto-apply-grid">
-                <div className="paste-link-card"><span className="large-feature-icon"><Link2 /></span><h2>Paste the job posting URL</h2><p>Detect the ATS, render the application in the center panel, and review AI suggestions on the right. No new tab and no visible Chrome.</p><div className="submission-mode" role="radiogroup" aria-label="Submission mode"><button type="button" role="radio" aria-checked={!autoSubmit} className={!autoSubmit ? 'active' : ''} onClick={() => setAutoSubmit(false)}><ShieldCheck /><span><b>Submit with approval</b><small>Review the completed form before sending.</small></span></button><button type="button" role="radio" aria-checked={autoSubmit} className={autoSubmit ? 'active' : ''} onClick={() => setAutoSubmit(true)}><Send /><span><b>Auto-submit</b><small>Send automatically when filling is complete.</small></span></button></div><label className="url-input"><Link2 /><input type="url" value={jobUrl} onChange={(event) => setJobUrl(event.target.value)} onPaste={(event) => { const pastedUrl = event.clipboardData.getData('text').trim(); if (!pastedUrl) return; event.preventDefault(); setJobUrl(pastedUrl); void startAutomation(pastedUrl) }} placeholder="https://jobs.lever.co/company/job-id/apply" /></label><button className="button primary large full" disabled={!jobUrl || automationLoading} onClick={() => void startAutomation()}>{automationLoading ? 'Starting…' : 'Start application'} <ArrowRight /></button><div className="supported-sites"><span>Available now</span>{supportedJobBoards.map((board) => <b key={board}>{board === 'bamboohr' ? 'BambooHR' : board[0].toUpperCase() + board.slice(1)}</b>)}</div>
+                <div className="paste-link-card"><span className="large-feature-icon"><Link2 /></span><h2>Paste the job posting URL</h2><p>Use your saved profile and resume, draft written answers with AI, and submit when the employer form is complete.</p><p><b>Review before submitting</b> — saved answers are prepared first. Once the form is ready, submit it here; use the assisted browser only when the employer requires an interactive step.</p><label className="url-input"><Link2 /><input type="url" aria-label="Job posting URL" value={jobUrl} onChange={(event) => setJobUrl(event.target.value)}  placeholder="https://jobs.lever.co/company/job-id/apply" /></label><button className="button primary large full" disabled={!jobUrl || automationLoading} onClick={() => void startAutomation()}>{automationLoading ? 'Starting…' : 'Start application'} <ArrowRight /></button><div className="supported-sites"><span>Available now</span>{supportedJobBoards.map((board) => <b key={board}>{board === 'bamboohr' ? 'BambooHR' : board[0].toUpperCase() + board.slice(1)}</b>)}</div>
                   {automationError && <p className="automation-error" role="alert">{automationError}</p>}
                 </div>
-                <LiveApplication run={automationRun} loading={automationLoading} onContinue={() => void continueAutomation()} onPause={() => void pauseAutomation()} onSubmit={() => void submitAutomation()} onUpdateAnswers={(fields) => void updateAutomationAnswers(fields)} onAssisted={() => void startAssistedBrowser()} onCancelAssisted={() => void cancelAssistedBrowser()} />
+                <LiveApplication run={automationRun} loading={automationLoading} onContinue={() => void continueAutomation()} onPause={() => void pauseAutomation()} onUpdateAnswers={(fields) => void updateAutomationAnswers(fields)} onAssisted={() => void startAssistedBrowser()} onCancelAssisted={() => void cancelAssistedBrowser()} onSubmitAssisted={() => void submitAssistedBrowser()} onSubmit={() => void submitApplication()} />
               </div>
             </section>
           )}
 
           {tab === 'applications' && (
             <section>
-              <div className="application-heading"><div className="dashboard-page-title"><p className="eyebrow">Application tracker</p><h1>Your applications</h1><p>Keep every role and its current status in one place.</p></div><div className="job-filter-pills application-filters" aria-label="Filter applications"><button className={applicationFilter === 'all' ? 'active' : ''} onClick={() => setApplicationFilter('all')}>All ({applicationRuns.length})</button><button className={applicationFilter === 'applied' ? 'active' : ''} onClick={() => setApplicationFilter('applied')}>Applied ({applicationRuns.filter(applicationGroups.applied).length})</button><button className={applicationFilter === 'active' ? 'active' : ''} onClick={() => setApplicationFilter('active')}>In progress ({applicationRuns.filter(applicationGroups.active).length})</button><button className={applicationFilter === 'attention' ? 'active' : ''} onClick={() => setApplicationFilter('attention')}>Needs input ({applicationRuns.filter(applicationGroups.attention).length})</button><button className={applicationFilter === 'failed' ? 'active' : ''} onClick={() => setApplicationFilter('failed')}>Failed ({applicationRuns.filter(applicationGroups.failed).length})</button></div></div>
+              <div className="application-heading"><div className="dashboard-page-title"><p className="eyebrow">Application tracker</p><h1>Your applications</h1><p>Keep every role and its current status in one place.</p>{automationError && <p role="alert">{automationError}</p>}</div><div className="job-filter-pills application-filters" aria-label="Filter applications"><button className={applicationFilter === 'all' ? 'active' : ''} onClick={() => setApplicationFilter('all')}>All ({applicationRuns.length})</button><button className={applicationFilter === 'applied' ? 'active' : ''} onClick={() => setApplicationFilter('applied')}>Applied ({applicationRuns.filter(applicationGroups.applied).length})</button><button className={applicationFilter === 'active' ? 'active' : ''} onClick={() => setApplicationFilter('active')}>In progress ({applicationRuns.filter(applicationGroups.active).length})</button><button className={applicationFilter === 'attention' ? 'active' : ''} onClick={() => setApplicationFilter('attention')}>Needs input ({applicationRuns.filter(applicationGroups.attention).length})</button><button className={applicationFilter === 'failed' ? 'active' : ''} onClick={() => setApplicationFilter('failed')}>Failed ({applicationRuns.filter(applicationGroups.failed).length})</button></div></div>
               {!filteredApplicationRuns.length ? <p className="jobs-message">{applicationRuns.length ? 'No applications match this status.' : 'No applications yet. Start one from a job link and it will appear here automatically.'}</p> : <div className="application-table-wrap"><table><thead><tr><th>Role</th><th>Date</th><th>Status</th><th>Board</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
-                {filteredApplicationRuns.map((run, index) => { const [label, statusClass] = runStatus(run.status); const company = run.job?.company || run.jobBoard; const title = run.job?.jobTitle || 'Job application'; return <tr key={run.id}><td><span className="table-company"><i style={{background:['#5e6ad2','#3866e8','#e95820','#1e8e6e'][index % 4]}}>{company[0]?.toUpperCase()}</i><span><b>{title}</b><small>{company}</small></span></span></td><td>{new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' }).format(new Date(run.createdAt))}</td><td><span className={`table-status ${statusClass}`}>{label}</span></td><td>{run.jobBoard}</td><td><a className="icon-button" href={run.jobUrl} target="_blank" rel="noreferrer" aria-label={`Open ${title}`}><ExternalLink /></a></td></tr> })}
+                {filteredApplicationRuns.map((run, index) => { const [label, statusClass] = runStatus(run); const company = run.job?.company || run.jobBoard; const title = run.job?.jobTitle || 'Job application'; return <tr key={run.id}><td><span className="table-company"><i style={{background:['#5e6ad2','#3866e8','#e95820','#1e8e6e'][index % 4]}}>{company[0]?.toUpperCase()}</i><span><b>{title}</b><small>{company}</small></span></span></td><td>{new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' }).format(new Date(run.createdAt))}</td><td><span className={`table-status ${statusClass}`}>{label}</span></td><td>{run.jobBoard}</td><td><button className="button ghost" onClick={() => void openApplicationRun(run)} aria-label={`View application for ${title}`}>View application</button><a className="icon-button" href={run.jobUrl} target="_blank" rel="noreferrer" aria-label={`Open ${title}`}><ExternalLink /></a></td></tr> })}
               </tbody></table></div>}
             </section>
           )}
@@ -631,7 +689,7 @@ function App() {
   const [authMode, setAuthMode] = useState<AuthMode>(null)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [page, setPage] = useState<'landing' | 'profile' | 'dashboard'>('landing')
-  const [profile, setProfile] = useState<ProfileSeed>({ name: 'Aryan Singh', email: '' })
+  const [profile, setProfile] = useState<ProfileSeed>({ name: 'Arjit Singh', email: '' })
 
   useEffect(() => {
     apiRequest<{ data: { user: ProfileSeed } }>('/api/auth/me')
@@ -748,7 +806,7 @@ function App() {
               <div className="browser-bar"><i /><i /><i /><span>jobs.example.com/apply</span></div>
               <div className="apply-body"><div className="apply-head"><span className="company-logo blue">J</span><div><small>APPLICATION</small><b>Frontend Engineer</b></div><span className="status-pill">Ready to review</span></div>
                 <div className="progress"><span /><span /><span /><span className="muted" /></div>
-                <div className="review-row"><span><FileCheck2 /> Resume</span><b>aryan-resume.pdf</b><Check /></div>
+                <div className="review-row"><span><FileCheck2 /> Resume</span><b>Arjit-resume.pdf</b><Check /></div>
                 <div className="review-row"><span><Clock3 /> Availability</span><b>Immediately</b><Check /></div>
                 <button className="button primary full">Review application <ArrowRight size={17} /></button>
               </div>

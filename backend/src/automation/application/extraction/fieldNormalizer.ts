@@ -21,7 +21,7 @@ export function semanticFieldKey(label: string, fallback = '') {
 
 export function isBloatedControlLabel(text: string) {
   const value = text.replace(/\s+/g, ' ').trim()
-  if (value.length > 80) return true
+  if (value.length > 600) return true
   return /united states.*united kingdom|afghanistan.*albania|\+\d{1,3}.*\+\d{1,3}.*\+\d{1,3}/i.test(value)
 }
 

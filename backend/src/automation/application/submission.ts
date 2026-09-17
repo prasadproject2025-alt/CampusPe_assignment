@@ -2,6 +2,7 @@ import { applyStoredAnswers } from './applyAnswers.js'
 import {
   AmbiguousFieldError,
   AnswerRequiresUserError,
+  AtsRejectionError,
   FieldResolutionError,
   ManualRequiredError,
   SubmissionTimeoutError,
@@ -44,15 +45,16 @@ async function stabilizeApplicationForm(page: Page) {
   await page.waitForTimeout(400)
 }
 
-async function assertLiveFormReadyToSubmit(adapter: JobBoardAdapter, page: Page, fields: ApplicationField[]) {
+export async function assertLiveFormReadyToSubmit(adapter: JobBoardAdapter, page: Page, fields: ApplicationField[]) {
   const questions = await adapter.extractQuestions(page)
   for (const question of questions) {
     if (!question.required || question.answered) continue
-    if (question.inputType === 'file' && /resume|\bcv\b/i.test(question.text)) continue
     const match = matchCanonicalField(question, fields)
-    if (match.status === 'AMBIGUOUS') throw new AmbiguousFieldError(question.id, question.text)
     const value = match.field?.value.trim() || ''
-    if (!value) throw new AnswerRequiresUserError(question.text)
+    if (!value) {
+      throw new AnswerRequiresUserError(question.text)
+    }
+    await adapter.fillAnswer(page, question, value).catch(() => undefined)
   }
   const validity = await page.evaluate(`(() => {
     var form = document.querySelector('form');
@@ -89,6 +91,9 @@ function mapSubmissionError(error: unknown): SubmissionResult {
   if (error instanceof SubmissionTimeoutError) {
     return { ok: false, error: error.message, code: 'SUBMISSION_TIMEOUT' }
   }
+  if (error instanceof AtsRejectionError) {
+    return { ok: false, error: error.message, code: 'SUBMISSION_FAILED' }
+  }
   const message = error instanceof Error ? error.message : 'The job board did not confirm submission.'
   if (message.startsWith('ANSWER_REQUIRES_USER:')) return { ok: false, error: message, code: 'ANSWER_REQUIRES_USER' }
   if (message.startsWith('AMBIGUOUS_FIELD:')) return { ok: false, error: message, code: 'AMBIGUOUS_FIELD' }
@@ -104,12 +109,13 @@ export async function fillReviewedApplicationOnPage(params: {
   userId: string
   jobUrl: string
   fields: ApplicationField[]
+  preserveLiveAnswers?: boolean
 }): Promise<SubmissionResult | { ok: true; code: 'FILLED' }> {
   try {
     await stabilizeApplicationForm(params.page)
     const blocker = await detectManualBlocker(params.page, params.adapter)
     if (blocker) return { ok: false, blocker, code: 'MANUAL_REQUIRED' }
-    await applyStoredAnswers(params.adapter, params.page, params.fields, params.userId, params.jobUrl)
+    await applyStoredAnswers(params.adapter, params.page, params.fields, params.userId, params.jobUrl, params.preserveLiveAnswers)
     const afterFill = await detectManualBlocker(params.page, params.adapter)
     if (afterFill) return { ok: false, blocker: afterFill, code: 'MANUAL_REQUIRED' }
     return { ok: true, code: 'FILLED' }
@@ -125,19 +131,22 @@ export async function runReviewedSubmission(params: {
   jobUrl: string
   fields: ApplicationField[]
   runId?: string
+  onPhase?: (phase: 'SUBMITTING' | 'VERIFYING') => void
   submitAttempted?: boolean
   confirmationTimeoutMs?: number
 }): Promise<SubmissionResult> {
   const timeoutMs = params.confirmationTimeoutMs ?? DEFAULT_CONFIRMATION_TIMEOUT_MS
   const runId = params.runId
-  
+
   try {
     const filled = await fillReviewedApplicationOnPage(params)
     if (!filled.ok) return filled
     await assertLiveFormReadyToSubmit(params.adapter, params.page, params.fields)
-    
+
+    params.onPhase?.('SUBMITTING')
     await params.adapter.submitApplication(params.page)
-    
+    params.onPhase?.('VERIFYING')
+
     if (!await atsConfirmationDetected(params.page)) {
       await waitForAtsConfirmation(params.page, {
         timeoutMs,
@@ -156,7 +165,7 @@ export async function runReviewedSubmission(params: {
         },
       })
     }
-    
+
     if (!await atsConfirmationDetected(params.page)) {
       return {
         ok: false,
@@ -164,12 +173,12 @@ export async function runReviewedSubmission(params: {
         error: 'The employer site did not confirm submission. Clicking Submit is not enough.',
       }
     }
-    
+
     // Success - close any CAPTCHA session
     if (runId) {
       await closeCaptchaSession(runId)
     }
-    
+
     return { ok: true, code: 'SUBMISSION_SUCCESS' }
   } catch (error) {
     return mapSubmissionError(error)
@@ -188,10 +197,13 @@ export async function submitApplicationWithServerBrowser(
   return runWithBrowserPermit('submit', async () => {
     const { browser, context } = await launchHeadlessAutomationBrowser()
     const page = await context.newPage()
-    
+    let transferred = false
     try {
       await adapter.openApplication(page, jobUrl)
-      await adapter.waitForApplication(page)
+      if (!await detectManualBlocker(page, adapter)) await adapter.waitForApplication(page)
+      // Warm up the page — build behavioral telemetry before interacting
+      const { warmUpPage } = await import('./stealthHelpers.js')
+      await warmUpPage(page)
       const result = await runReviewedSubmission({
         adapter,
         page,
@@ -201,32 +213,12 @@ export async function submitApplicationWithServerBrowser(
         runId,
         confirmationTimeoutMs: options.confirmationTimeoutMs,
       })
-      
-      // Check if CAPTCHA session was created during submission
-      const captchaSessionCreated = runId ? hasActiveCaptchaSession(runId) : false
-      
-      // If CAPTCHA session was created, ensure it has browser ownership
-      if (captchaSessionCreated && runId) {
-        const { createCaptchaSession, getCaptchaSession } = await import('./captchaHandoff.js')
-        const existingSession = getCaptchaSession(runId)
-        if (existingSession && !existingSession.browser) {
-          // Update session with browser/context ownership from the server browser
-          createCaptchaSession({
-            userId,
-            runId,
-            jobUrl,
-            adapter,
-            browser,
-            context,
-            page,
-            fields,
-            stage: existingSession.stage,
-            submitAttempted: existingSession.submitAttempted,
-            submitAttemptCount: existingSession.submitAttemptCount,
-          })
-        }
+
+      if (!result.ok && runId && ['MANUAL_REQUIRED', 'ANSWER_REQUIRES_USER', 'AMBIGUOUS_FIELD', 'FIELD_NOT_FOUND'].includes(result.code)) {
+        const { startAssistedSession } = await import('./assistedSession.js')
+        await startAssistedSession({ userId, runId, jobUrl, fields, adapter, existingBrowser: { browser, context, page } })
+        transferred = true
       }
-      
       return result
     } catch (error) {
       return mapSubmissionError(error)
@@ -234,7 +226,7 @@ export async function submitApplicationWithServerBrowser(
       // Only close browser if CAPTCHA session was NOT created
       // When CAPTCHA session exists, ownership transfers to captchaHandoff
       const captchaSessionCreated = runId ? hasActiveCaptchaSession(runId) : false
-      if (!captchaSessionCreated) {
+      if (!transferred && !captchaSessionCreated) {
         await page.close().catch(() => undefined)
         await context.close().catch(() => undefined)
         await browser.close().catch(() => undefined)

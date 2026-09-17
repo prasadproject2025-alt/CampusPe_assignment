@@ -1,46 +1,39 @@
+import { startSubmissionTrace } from './application/submissionTrace.js'
 import { randomUUID } from 'node:crypto'
-import type { Browser, BrowserContext, Page } from 'playwright-core'
+import type { Page } from 'playwright-core'
 import { db } from '../database.js'
 import { answerResolver } from '../resolver/engine.js'
-import { applyStoredAnswers, loadResumeForJob, resumeFile } from './application/applyAnswers.js'
+import { fileRole } from './application/canonicalIdentity.js'
+import { loadResumeForJob } from './application/applyAnswers.js'
 import { extractApplicationSchema } from './application/extractor.js'
-import { runReviewedSubmission, submitApplicationWithServerBrowser } from './application/submission.js'
+import { runReviewedSubmission } from './application/submission.js'
+import { detectManualBlocker } from './application/submissionConfirmation.js'
 import {
   assistedSessionExists,
   cancelAssistedSession,
   dispatchAssistedInput,
   getAssistedSessionForRun,
   startAssistedSession,
+  submitAssistedApplication,
   type AssistedSessionSnapshot,
 } from './application/assistedSession.js'
-import { greenhouseEmbedUrl, isAllowedEmbedUrl } from './application/embedPolicy.js'
-import { firstUnresolvedRequired, mergeFieldUpdates, questionsToFields, applicationFromQuestions, matchQuestionToField, fieldToQuestion } from './application/formModel.js'
-import { reconcileCanonicalFields } from './application/reconcileCanonical.js'
-import { parseGreenhouseJobUrl } from './application/greenhouseForm.js'
+import { isAllowedEmbedUrl } from './application/embedPolicy.js'
+import { firstUnresolvedRequired, mergeFieldUpdates, fieldToQuestion } from './application/formModel.js'
 import { pipelineCapabilityForBoard } from './application/capabilities.js'
-import { parseSubmissionFailureCode } from './application/fieldResolution.js'
+import { parseSubmissionFailureCode, isEmployerSpamRejection } from './application/fieldResolution.js'
 import { canProgrammaticallySubmit, capabilitiesForBoard, resolveApplicationStrategy, shouldLaunchBrowserForStrategy } from './application/strategyResolver.js'
 import { logApplicationSchema } from './application/schema.js'
-import { emptyApplication, type ApplicationField, type ApplicationModel, type ApplicationStrategy } from './application/types.js'
-import { launchHeadlessAutomationBrowser } from './browserLauncher.js'
+import { emptyApplication, type ApplicationModel, type ApplicationStrategy } from './application/types.js'
+import { launchHeadlessAutomationBrowser, runWithBrowserPermit } from './browserLauncher.js'
 import { dispatchPreviewInput, startRunPreview, stopRunPreview, type PreviewInput } from './preview.js'
 import { canonicalJobUrl, detectAdapter } from './registry.js'
 import { validateApplicationForRealSubmission } from './application/submissionValidator.js'
 import {
   cleanupExpiredCaptchaSessions,
-  closeCaptchaSession,
-  createCaptchaSession,
   getCaptchaSession,
   getCaptchaSessionInfo as getCaptchaSessionDetails,
-  getCaptchaSessionTimeout,
-  hasActiveCaptchaSession,
-  resumeAfterCaptcha as resumeAfterCaptchaInternal,
-  startCaptchaMonitoring,
-  stopCaptchaMonitoring,
-  type CaptchaSessionStage,
 } from './application/captchaHandoff.js'
-import { DEFAULT_CONFIRMATION_TIMEOUT_MS } from './application/submissionConfirmation.js'
-import type { ActiveRun, AdapterQuestion, AutomationStatus, EducationRecord, JobBoardAdapter, JobDetails } from './types.js'
+import type { ActiveRun, AdapterQuestion, AutomationStatus, JobDetails } from './types.js'
 
 type RunRow = {
   id: string; user_id: string; job_url: string; job_board: string; status: AutomationStatus; current_step: string
@@ -59,6 +52,7 @@ if (!captchaCleanupInterval) {
   captchaCleanupInterval = setInterval(() => {
     void cleanupExpiredCaptchaSessions().catch(() => undefined)
   }, 60000) // Check every minute
+  captchaCleanupInterval.unref()
 }
 
 export function automationBrowserKey(userId: string, _board: string, runId = '') {
@@ -105,8 +99,10 @@ function serializeRun(row: RunRow) {
   }
 }
 
+export class AutomationConflictError extends Error { }
+
 export class AutomationManager {
-  create(userId: string, jobUrl: string, autoSubmit = false, testMode = false) {
+  create(userId: string, jobUrl: string, _autoSubmit = false, testMode = false) {
     jobUrl = canonicalJobUrl(jobUrl)
     const adapter = detectAdapter(jobUrl)
     if (!adapter) throw new Error('This job board is not supported yet. Use an Ashby, Greenhouse, Rippling, Breezy, Lever, Workable, BambooHR, or Recruitee job link.')
@@ -114,7 +110,7 @@ export class AutomationManager {
     const id = randomUUID(); const now = new Date().toISOString()
     const application = emptyApplication(adapter.id, strategy, 'Loading application…', { displayMode: 'native_form' })
     db.prepare('INSERT INTO automation_runs (id,user_id,job_url,job_board,status,current_step,auto_submit,test_mode,strategy,application_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(
-      id, userId, jobUrl, adapter.id, 'QUEUED', 'QUEUED', testMode ? 0 : autoSubmit ? 1 : 0, testMode ? 1 : 0, strategy, JSON.stringify(application), now, now,
+      id, userId, jobUrl, adapter.id, 'QUEUED', 'QUEUED', 0, testMode ? 1 : 0, strategy, JSON.stringify(application), now, now,
     )
     event(id, 'QUEUED', `Application run created (${strategy.replaceAll('_', ' ').toLowerCase()}). ${capabilities.customFormReason}`)
     queueMicrotask(() => void this.process(id, userId))
@@ -136,10 +132,20 @@ export class AutomationManager {
     const application = parseApplication(row)
     if (!application?.fields.length) throw new Error('This application does not have an editable in-page form yet.')
     if (!['PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA', 'READY_FOR_REVIEW', 'FILLING_APPLICATION'].includes(row.status)) {
-      throw new Error('Answers can only be edited while the application is filling or waiting for review.')
+      throw new AutomationConflictError('Answers can only be edited while the application is filling or waiting for review.')
+    }
+    if (updates.some(item => !application.fields.some(field => field.id === item.id))) {
+      throw new AutomationConflictError('The application fields changed. Refresh the form before saving this answer.')
     }
     application.fields = mergeFieldUpdates(application.fields, updates)
-    update(runId, row.status, row.current_step, { application, pause: row.pause_json ? JSON.parse(row.pause_json) : null, error: row.error_message })
+    let pause = row.pause_json ? JSON.parse(row.pause_json) : null
+    if (row.status === 'PAUSED_NEEDS_INPUT' && row.current_step === 'WAITING_FOR_USER' && pause?.question) {
+      const unresolved = firstUnresolvedRequired(application.fields)
+      pause = unresolved
+        ? { question: fieldToQuestion(unresolved), reason: unresolved.reason || 'Complete this required field.', instruction: 'Complete this field in the JobCopilot form, then click Continue automation on the right.' }
+        : { reason: 'Your answers are saved.', instruction: 'Click Continue automation to validate the completed form.' }
+    }
+    update(runId, row.status, row.current_step, { application, pause, error: row.error_message })
     return this.get(userId, runId)
   }
 
@@ -158,6 +164,10 @@ export class AutomationManager {
   async resume(userId: string, runId: string) {
     const row = db.prepare('SELECT * FROM automation_runs WHERE id=? AND user_id=?').get(runId, userId) as RunRow | undefined
     if (!row) throw new Error('Application run not found.')
+    if (assistedSessionExists(runId)) {
+      await submitAssistedApplication(userId, runId)
+      return this.get(userId, runId)
+    }
     if (!row.status.startsWith('PAUSED_')) throw new Error('This run is not waiting for manual input.')
     manualPauseRequests.delete(runId)
     const adapter = detectAdapter(row.job_url)
@@ -175,9 +185,9 @@ export class AutomationManager {
       const resolvedCount = application?.fields.filter(f => f.value.trim()).length || 0
       const unresolvedRequired = application?.fields.filter(f => f.required && !f.value.trim()).length || 0
       const ambiguousCount = application?.fields.filter(f => f.status === 'unresolved').length || 0
-      
+
       event(runId, 'READY_FOR_REVIEW', `Application is filled and ready for your review and submission approval. Fields: ${fieldCount}, Required: ${requiredCount}, Resolved: ${resolvedCount}, Unresolved required: ${unresolvedRequired}, Ambiguous: ${ambiguousCount}, Provider: ${adapter?.id || 'unknown'}`)
-      
+
       // Auto-submit guard conditions
       if (row.auto_submit && canProgrammaticallySubmit('CUSTOM_FORM') && !row.test_mode) {
         // Verify all guard conditions before auto-submitting
@@ -185,27 +195,31 @@ export class AutomationManager {
           event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked: ${unresolvedRequired} required fields are unresolved`)
           return this.get(userId, runId)
         }
-        
+
         if (ambiguousCount > 0) {
           event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked: ${ambiguousCount} fields are ambiguous`)
           return this.get(userId, runId)
         }
-        
+
         // Pre-submit integrity validation
-        const validation = validateApplicationForRealSubmission(application, false)
+        const validation = validateApplicationForRealSubmission(application, Boolean(row.test_mode))
         if (!validation.isValid) {
           event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked by integrity validation: ${validation.violations.join('; ')}`)
           return this.get(userId, runId)
         }
-        
+
         // Check duplicate submission lock
         if (submissionLocks.has(runId)) {
           event(runId, 'READY_FOR_REVIEW', 'Auto-submit blocked: Submission already in progress')
           return this.get(userId, runId)
         }
-        
-        event(runId, 'READY_FOR_REVIEW', 'Auto-submit mode is enabled. All guard conditions passed. Submitting the completed application now.')
-        queueMicrotask(() => void this.submit(userId, runId))
+
+        event(runId, 'SUBMITTING', 'Auto-submit starting approved application submission.')
+        queueMicrotask(() => {
+          void submitAssistedApplication(userId, runId).catch((error) => {
+            console.error('Auto-submit error:', error)
+          })
+        })
       }
       return this.get(userId, runId)
     }
@@ -214,7 +228,7 @@ export class AutomationManager {
     if (row.current_step === 'WAITING_FOR_SUBMIT_CAPTCHA') {
       event(runId, 'SUBMITTING', 'User completed the submission CAPTCHA. Retrying the approved submission in the existing browser.')
       update(runId, 'READY_FOR_REVIEW', 'AWAITING_FINAL_REVIEW')
-      queueMicrotask(() => void this.submit(userId, runId))
+      this.scheduleAssisted(userId, runId)
       return this.get(userId, runId)
     }
     event(runId, 'FILLING_APPLICATION', 'User continued the automation. Completed fields will be skipped.')
@@ -238,13 +252,15 @@ export class AutomationManager {
 
   async startAssisted(userId: string, runId: string) {
     const row = db.prepare('SELECT * FROM automation_runs WHERE id=? AND user_id=?').get(runId, userId) as RunRow | undefined
-    if (!row) throw new Error('Application run not found.')
-    if (row.test_mode) throw new Error('Testing mode never opens an assisted submission session.')
-    if (row.status === 'SUBMITTED') throw new Error('This application was already submitted.')
-    if (row.status === 'SUBMITTING') throw new Error('This application is already submitting.')
+    if (!row) throw new AutomationConflictError('Application run not found.')
+    if (row.test_mode) throw new AutomationConflictError('Testing mode never opens an assisted submission session.')
+    if (row.status === 'SUBMITTED') throw new AutomationConflictError('This application was already submitted.')
+    if (row.status === 'SUBMITTING') throw new AutomationConflictError('This application is already submitting.')
     if (!['READY_FOR_REVIEW', 'PAUSED_BY_USER', 'PAUSED_NEEDS_INPUT', 'PAUSED_LOGIN', 'PAUSED_CAPTCHA'].includes(row.status)) {
-      throw new Error('Start assisted browser after the application is ready for review or waiting for a manual step.')
+      throw new AutomationConflictError('Start assisted browser after the application is ready for review or waiting for a manual step.')
     }
+    if (row.current_step === 'SUBMISSION_TIMEOUT' && !activeRuns.has(runId) && !assistedSessionExists(runId)) throw new AutomationConflictError('The original timed-out session is no longer available. Check with the employer before starting another application; JobCopilot will not replay this uncertain submission.')
+    if (isEmployerSpamRejection(row.error_message)) throw new AutomationConflictError('The employer rejected this run as possible spam. This run cannot be retried in an assisted browser.')
     const adapter = detectAdapter(row.job_url)
     if (!adapter) throw new Error('The job-board adapter is unavailable.')
     const application = parseApplication(row)
@@ -293,22 +309,26 @@ export class AutomationManager {
       }
       if (view.status === 'WAITING_FOR_USER' || view.status === 'USER_REVIEWING') {
         update(runId, 'PAUSED_NEEDS_INPUT', view.status, {
-          pause: { reason: view.reason, instruction: 'Use the assisted browser to finish and submit. JobCopilot will not click Submit for you.' },
+          pause: { reason: view.reason, instruction: 'Use the assisted browser to finish and submit. Use the side Submit application button after reviewing the live form.' },
         })
         event(runId, 'PAUSED_NEEDS_INPUT', view.reason)
         return
       }
       update(runId, 'PAUSED_NEEDS_INPUT', 'WAITING_FOR_USER', {
-        pause: { reason: view.reason, instruction: 'Use the assisted browser to finish and submit. JobCopilot will not click Submit for you.' },
+        pause: { reason: view.reason, instruction: 'Use the assisted browser to finish and submit. Use the side Submit application button after reviewing the live form.' },
       })
       event(runId, 'PAUSED_NEEDS_INPUT', view.reason)
     }
-    event(runId, 'FILLING_APPLICATION', 'Starting an assisted chrome-headless-shell session for this application.')
+    event(runId, 'FILLING_APPLICATION', 'Starting an isolated headless Chrome session for this application.')
+    const retained = activeRuns.get(runId)
+    activeRuns.delete(runId)
     const view = await startAssistedSession({
       userId,
       runId,
       jobUrl: row.job_url,
       fields: application?.fields || [],
+      existingBrowser: retained,
+      observeOnly: row.current_step === 'SUBMISSION_TIMEOUT',
       onChange: applyAssistedStatus,
     })
     applyAssistedStatus(view)
@@ -331,134 +351,13 @@ export class AutomationManager {
   async resumeAfterCaptcha(userId: string, runId: string) {
     const row = db.prepare('SELECT * FROM automation_runs WHERE id=? AND user_id=?').get(runId, userId) as RunRow | undefined
     if (!row) throw new Error('Application run not found.')
-    
+
     if (row.status !== 'PAUSED_CAPTCHA') {
       throw new Error('This application is not paused due to CAPTCHA.')
     }
-    
-    // Stop CAPTCHA monitoring - we're manually resuming
-    stopCaptchaMonitoring(runId)
-    
-    const captchaSession = getCaptchaSession(runId)
-    if (!captchaSession) {
-      throw new Error('No active CAPTCHA session found. The session may have expired.')
-    }
-    
-    // Check if CAPTCHA is cleared
-    const cleared = await resumeAfterCaptchaInternal(runId)
-    
-    if (!cleared.success) {
-      throw new Error(`Cannot resume: ${cleared.reason}`)
-    }
-    
-    // Update status to RESUMING
-    update(runId, 'RESUMING', 'RESUMING_FROM_CAPTCHA')
-    event(runId, 'RESUMING', 'CAPTCHA cleared. Resuming application submission.')
-    
-    // For POST_SUBMIT stage, check for confirmation first
-    if (captchaSession.stage === 'POST_SUBMIT') {
-      if (cleared.reason === 'ATS confirmation detected') {
-        update(runId, 'SUBMITTED', 'APPLICATION_SUBMITTED')
-        event(runId, 'SUBMITTED', 'ATS confirmation detected after CAPTCHA cleared.')
-        return this.get(userId, runId)
-      }
-      
-      // POST_SUBMIT but no confirmation - check if we should retry submit
-      // Only retry if submitAttemptCount is reasonable (< 3)
-      if (captchaSession.submitAttemptCount >= 3) {
-        update(runId, 'PAUSED_NEEDS_INPUT', 'MAX_SUBMIT_ATTEMPTS')
-        event(runId, 'PAUSED_NEEDS_INPUT', 'Maximum submit attempts reached after CAPTCHA. Manual intervention required.')
-        return this.get(userId, runId)
-      }
-    }
-    
-    // For PRE_SUBMIT stage: we need to submit now since we never clicked submit before
-    // Direct submission using the preserved browser session
-    const adapter = detectAdapter(row.job_url)
-    if (!adapter) throw new Error('The job-board adapter is unavailable.')
-    
-    const application = parseApplication(row)
-    
-    submissionLocks.add(runId)
-    update(runId, 'SUBMITTING', 'SUBMITTING_APPLICATION')
-    event(runId, 'SUBMITTING', 'Resuming from CAPTCHA. Submitting through preserved browser session.')
-    
-    try {
-      const result = await runReviewedSubmission({
-        adapter,
-        page: captchaSession.page,
-        userId,
-        jobUrl: row.job_url,
-        fields: application?.fields || [],
-        runId,
-        submitAttempted: captchaSession.submitAttempted,
-      })
-      
-      if (result.ok && result.code === 'SUBMISSION_SUCCESS') {
-        update(runId, 'SUBMITTED', 'APPLICATION_SUBMITTED')
-        event(runId, 'SUBMITTED', 'Application submitted successfully after CAPTCHA was cleared.')
-        return this.get(userId, runId)
-      }
-      
-      if (!result.ok && 'blocker' in result && result.blocker) {
-        const isCaptcha = result.blocker.type === 'CAPTCHA'
-        const preserveSession = isCaptcha && (result.blocker as any).preserveSession !== false
-        
-        if (isCaptcha && preserveSession) {
-          // CAPTCHA still present - go back to PAUSED_CAPTCHA
-          const stage: CaptchaSessionStage = captchaSession.submitAttempted ? 'POST_SUBMIT' : 'PRE_SUBMIT'
-          createCaptchaSession({
-            userId,
-            runId,
-            jobUrl: row.job_url,
-            adapter,
-            browser: captchaSession.browser,
-            context: captchaSession.context,
-            page: captchaSession.page,
-            fields: application?.fields || [],
-            stage,
-            submitAttempted: captchaSession.submitAttempted,
-            submitAttemptCount: captchaSession.submitAttemptCount + 1,
-          })
-          
-          startCaptchaMonitoring(runId, async () => {
-            try {
-              await this.resumeAfterCaptcha(userId, runId)
-            } catch (error) {
-              event(runId, 'PAUSED_CAPTCHA', `Auto-resume after CAPTCHA clear failed: ${error instanceof Error ? error.message : String(error)}`)
-            }
-          })
-          
-          const currentStep = stage === 'POST_SUBMIT' ? 'WAITING_FOR_SUBMIT_CAPTCHA' : 'WAITING_FOR_PRE_SUBMIT_CAPTCHA'
-          this.pauseForBlocker(runId, 'PAUSED_CAPTCHA', result.blocker.message)
-          update(runId, 'PAUSED_CAPTCHA', currentStep, {
-            strategy: 'MANUAL_REQUIRED',
-            pause: { 
-              reason: result.blocker.message, 
-              instruction: 'Complete the CAPTCHA in the assisted browser. JobCopilot will automatically resume when the challenge is cleared.' 
-            },
-          })
-          event(runId, 'PAUSED_CAPTCHA', `CAPTCHA still present after resume attempt. Browser session preserved. Current step: ${currentStep}`)
-          return this.get(userId, runId)
-        }
-        
-        // Other blocker - fail
-        update(runId, 'FAILED', 'SUBMISSION_FAILED', { error: result.blocker.message })
-        event(runId, 'FAILED', `Submission failed after CAPTCHA clear: ${result.blocker.message}`)
-        return this.get(userId, runId)
-      }
-      
-      // Other error
-      update(runId, 'FAILED', 'SUBMISSION_FAILED', { error: result.code === 'SUBMISSION_TIMEOUT' ? result.error : 'Submission failed' })
-      event(runId, 'FAILED', `Submission failed after CAPTCHA clear: ${result.code}`)
-      return this.get(userId, runId)
-      
-    } catch (error) {
-      submissionLocks.delete(runId)
-      update(runId, 'FAILED', 'SUBMISSION_FAILED', { error: error instanceof Error ? error.message : String(error) })
-      event(runId, 'FAILED', `Submission failed after CAPTCHA clear: ${error instanceof Error ? error.message : String(error)}`)
-      return this.get(userId, runId)
-    }
+
+    if (assistedSessionExists(runId)) return this.get(userId, runId)
+    throw new Error('Continue in the assisted browser and submit when ready. Automatic CAPTCHA resubmission is disabled.')
   }
 
   getCaptchaSessionInfo(userId: string, runId: string) {
@@ -469,28 +368,47 @@ export class AutomationManager {
     return getCaptchaSessionDetails(runId)
   }
 
+  private scheduleAssisted(userId: string, runId: string) {
+    queueMicrotask(() => {
+      void this.startAssisted(userId, runId).catch(error => {
+        // Another request may already own the assisted/submission session.
+        // A background request must not crash the API or overwrite that owner.
+        if (error instanceof AutomationConflictError) return
+        const message = error instanceof Error ? error.message : 'Submission failed.'
+        update(runId, 'FAILED', 'SUBMISSION_FAILED', { error: message })
+        event(runId, 'FAILED', message)
+      })
+    })
+  }
+
   async submit(userId: string, runId: string) {
     const row = db.prepare('SELECT * FROM automation_runs WHERE id=? AND user_id=?').get(runId, userId) as RunRow | undefined
-    if (!row) throw new Error('Application run not found.')
-    if (row.test_mode) throw new Error('Testing mode never submits applications. Start a normal run when you are ready to apply.')
+    if (!row) throw new AutomationConflictError('Application run not found.')
+    if (row.test_mode) throw new AutomationConflictError('Testing mode never submits applications. Start a normal run when you are ready to apply.')
     if (assistedSessionExists(runId)) {
-      throw new Error('This application is already open in the assisted browser. Submit it there. JobCopilot will not start a second browser.')
+      await submitAssistedApplication(userId, runId)
+      return this.get(userId, runId)
     }
-    if (row.status === 'SUBMITTING' || row.status === 'SUBMITTED') throw new Error('This application was already submitted or is submitting.')
-    if (submissionLocks.has(runId)) throw new Error('This application was already submitted or is submitting.')
+    if (row.status === 'SUBMITTING' || row.status === 'SUBMITTED') return this.get(userId, runId)
+    if (submissionLocks.has(runId)) return this.get(userId, runId)
     const retryableFailure = parseSubmissionFailureCode(row.current_step, row.error_message)
+    if (retryableFailure === 'SUBMISSION_TIMEOUT') throw new AutomationConflictError('The previous submission has an unknown outcome. Check the original assisted session or employer confirmation before starting another application.')
+    if (retryableFailure === 'SUBMISSION_FAILED' && isEmployerSpamRejection(row.error_message)) {
+      throw new AutomationConflictError('The employer rejected this run as possible spam. Automatic retries are disabled; no successful submission was confirmed.')
+    }
     if (row.status !== 'READY_FOR_REVIEW' && !(row.status === 'PAUSED_NEEDS_INPUT' && retryableFailure)) {
-      throw new Error('This application is not ready to submit yet.')
+      throw new AutomationConflictError('This application is not ready to submit yet.')
     }
     const adapter = detectAdapter(row.job_url)
-    if (!adapter) throw new Error('The job-board adapter is unavailable.')
+    if (!adapter) throw new AutomationConflictError('The job-board adapter is unavailable.')
     const strategy = (row.strategy as ApplicationStrategy) || resolveApplicationStrategy(adapter.id, row.job_url).strategy
     if (!canProgrammaticallySubmit(strategy)) {
-      throw new Error('This application requires you to finish it on the employer site. JobCopilot will not open Chrome.')
+      throw new AutomationConflictError('This application requires you to finish it on the employer site. JobCopilot will not open Chrome.')
     }
 
     submissionLocks.add(runId)
     update(runId, 'SUBMITTING', 'SUBMITTING_APPLICATION')
+    let stopTrace: (() => Promise<void>) | undefined
     event(runId, 'SUBMITTING', row.auto_submit ? 'Auto-submit mode started the approved automatic submission.' : 'Submission approved by the user.')
     try {
       const application = parseApplication(row)
@@ -502,165 +420,33 @@ export class AutomationManager {
       }
 
       event(runId, 'SUBMITTING', 'Sending reviewed answers through a disposable windowless browser worker.')
-      const active = activeRuns.get(runId)
-      
-      // Check if resuming from CAPTCHA session
-      const existingCaptchaSession = getCaptchaSession(runId)
-      let submitAttempted = false
-      let submitAttemptCount = 0
-      
-      if (existingCaptchaSession) {
-        submitAttempted = existingCaptchaSession.submitAttempted
-        submitAttemptCount = existingCaptchaSession.submitAttemptCount
-        event(runId, 'SUBMITTING', 'Resuming from CAPTCHA session. Browser preserved.')
-      }
-      
-      const result = active?.browser.isConnected() && !active.page.isClosed()
-        ? await runReviewedSubmission({
-          adapter,
-          page: active.page,
-          userId,
-          jobUrl: row.job_url,
-          fields: application?.fields || [],
-          runId,
-          submitAttempted,
-        })
-        : await submitApplicationWithServerBrowser(row.job_url, userId, application?.fields || [], runId)
-      
-      if (!result.ok && 'blocker' in result && result.blocker) {
-        const isCaptcha = result.blocker.type === 'CAPTCHA'
-        const preserveSession = isCaptcha && (result.blocker as any).preserveSession !== false
-        
-        // Enhanced observability for CAPTCHA events
-        if (isCaptcha) {
-          const challengeType = (result.blocker as any).challengeType || 'unknown'
-          const provider = (result.blocker as any).provider || adapter.id
-          const stage: CaptchaSessionStage = submitAttempted ? 'POST_SUBMIT' : 'PRE_SUBMIT'
-          event(runId, 'PAUSED_CAPTCHA', `CAPTCHA detected - Type: ${challengeType}, Provider: ${provider}, Stage: ${stage}, Submit attempted: ${submitAttempted}`)
+      const active = await runWithBrowserPermit('submit', async () => {
+        const existing = activeRuns.get(runId)
+        if (existing?.browser.isConnected() && !existing.page.isClosed()) {
+          stopTrace = await startSubmissionTrace(existing.context, runId)
+          return existing
         }
-        
-        if (preserveSession && active?.browser.isConnected() && !active.page.isClosed()) {
-          // For active browser case, preserve in CAPTCHA session
-          const stage: CaptchaSessionStage = submitAttempted ? 'POST_SUBMIT' : 'PRE_SUBMIT'
-          createCaptchaSession({
-            userId,
-            runId,
-            jobUrl: row.job_url,
-            adapter,
-            browser: active.browser,
-            context: active.context,
-            page: active.page,
-            fields: application?.fields || [],
-            stage,
-            submitAttempted: true,
-            submitAttemptCount: submitAttemptCount + 1,
-          })
-          
-          // Start automatic CAPTCHA monitoring
-          startCaptchaMonitoring(runId, async () => {
-            // CAPTCHA cleared - trigger resume
-            try {
-              await this.resumeAfterCaptcha(userId, runId)
-            } catch (error) {
-              event(runId, 'PAUSED_CAPTCHA', `Auto-resume after CAPTCHA clear failed: ${error instanceof Error ? error.message : String(error)}`)
-            }
-          })
-          
-          const currentStep = stage === 'POST_SUBMIT' ? 'WAITING_FOR_SUBMIT_CAPTCHA' : 'WAITING_FOR_PRE_SUBMIT_CAPTCHA'
-          this.pauseForBlocker(runId, 'PAUSED_CAPTCHA', result.blocker.message)
-          update(runId, 'PAUSED_CAPTCHA', currentStep, {
-            strategy: 'MANUAL_REQUIRED',
-            pause: { 
-              reason: result.blocker.message, 
-              instruction: 'Complete the CAPTCHA in the assisted browser. JobCopilot will automatically resume when the challenge is cleared.' 
-            },
-          })
-          event(runId, 'PAUSED_CAPTCHA', `CAPTCHA detected. Browser session preserved. Auto-monitoring started. Current step: ${currentStep}`)
-          return this.get(userId, runId)
-        }
-        
-        // For server browser case, check if CAPTCHA session was created with browser ownership
-        if (isCaptcha && application) {
-          const captchaSession = getCaptchaSession(runId)
-          if (captchaSession && captchaSession.browser) {
-            // Browser successfully preserved in CAPTCHA session
-            const currentStep = captchaSession.stage === 'POST_SUBMIT' ? 'WAITING_FOR_SUBMIT_CAPTCHA' : 'WAITING_FOR_PRE_SUBMIT_CAPTCHA'
-            const challengeType = (result.blocker as any).challengeType || 'unknown'
-            const provider = (result.blocker as any).provider || adapter.id
-            event(runId, 'PAUSED_CAPTCHA', `CAPTCHA session preserved - Type: ${challengeType}, Provider: ${provider}, Stage: ${captchaSession.stage}, Submit attempts: ${captchaSession.submitAttemptCount}`)
-            
-            // Start automatic CAPTCHA monitoring
-            startCaptchaMonitoring(runId, async () => {
-              // CAPTCHA cleared - trigger resume
-              try {
-                await this.resumeAfterCaptcha(userId, runId)
-              } catch (error) {
-                event(runId, 'PAUSED_CAPTCHA', `Auto-resume after CAPTCHA clear failed: ${error instanceof Error ? error.message : String(error)}`)
-              }
-            })
-            
-            this.pauseForBlocker(runId, 'PAUSED_CAPTCHA', result.blocker.message)
-            update(runId, 'PAUSED_CAPTCHA', currentStep, {
-              strategy: 'MANUAL_REQUIRED',
-              pause: { 
-              reason: result.blocker.message, 
-              instruction: 'Complete the CAPTCHA in the assisted browser. JobCopilot will automatically resume when the challenge is cleared.' 
-              },
-            })
-            event(runId, 'PAUSED_CAPTCHA', `CAPTCHA detected. Browser session preserved. Auto-monitoring started. Current step: ${currentStep}`)
-            return this.get(userId, runId)
-          }
-          
-          // Fallback: start assisted session if browser not preserved
-          try {
-            const assisted = await startAssistedSession({
-              userId,
-              runId,
-              jobUrl: row.job_url,
-              fields: application.fields,
-              adapter,
-              inactivityMs: getCaptchaSessionTimeout(),
-              confirmationTimeoutMs: DEFAULT_CONFIRMATION_TIMEOUT_MS,
-              onChange: (snapshot) => {
-                if (snapshot.status === 'SUBMITTED') {
-                  event(runId, 'SUBMITTED', 'ATS confirmation detected through assisted session.')
-                }
-              },
-            })
-            
-            const currentStep = submitAttempted ? 'WAITING_FOR_SUBMIT_CAPTCHA' : 'WAITING_FOR_PRE_SUBMIT_CAPTCHA'
-            const challengeType = (result.blocker as any).challengeType || 'unknown'
-            const provider = (result.blocker as any).provider || adapter.id
-            event(runId, 'PAUSED_CAPTCHA', `CAPTCHA detected - Type: ${challengeType}, Provider: ${provider}, Stage: ${currentStep}, New assisted session started`)
-            this.pauseForBlocker(runId, 'PAUSED_CAPTCHA', result.blocker.message)
-            update(runId, 'PAUSED_CAPTCHA', currentStep, {
-              strategy: 'MANUAL_REQUIRED',
-              pause: { 
-              reason: result.blocker.message, 
-              instruction: 'Complete the CAPTCHA in the assisted browser. JobCopilot will automatically resume when the challenge is cleared.' 
-              },
-            })
-            event(runId, 'PAUSED_CAPTCHA', `CAPTCHA detected. Assisted browser started. User must complete the challenge. Current step: ${currentStep}`)
-            return this.get(userId, runId)
-          } catch (assistError) {
-            event(runId, 'PAUSED_CAPTCHA', `Assisted session failed for CAPTCHA: ${assistError instanceof Error ? assistError.message : String(assistError)}`)
-            this.pauseForBlocker(runId, 'PAUSED_CAPTCHA', result.blocker.message)
-            update(runId, 'PAUSED_CAPTCHA', 'MANUAL_REQUIRED', {
-              strategy: 'MANUAL_REQUIRED',
-              pause: { reason: result.blocker.message, instruction: 'Complete this step on the employer site. JobCopilot will not open Chrome automatically.' },
-            })
-            return this.get(userId, runId)
-          }
-        }
-        
-        this.pauseForBlocker(runId, isCaptcha ? 'PAUSED_CAPTCHA' : 'PAUSED_LOGIN', result.blocker.message)
-        update(runId, isCaptcha ? 'PAUSED_CAPTCHA' : 'PAUSED_LOGIN', 'MANUAL_REQUIRED', {
-          strategy: 'MANUAL_REQUIRED',
-          pause: { reason: result.blocker.message, instruction: 'Complete this step on the employer site. JobCopilot will not open Chrome automatically.' },
-        })
+        const created = await this.ensureBrowser(runId, userId, adapter, true)
+        stopTrace = await startSubmissionTrace(created.context, runId)
+        await adapter.openApplication(created.page, row.job_url)
+        if (!await detectManualBlocker(created.page, adapter)) await adapter.waitForApplication(created.page)
+        // Warm up the page — build behavioral telemetry before form interaction
+        const { warmUpPage } = await import('./application/stealthHelpers.js')
+        await warmUpPage(created.page)
+        return created
+      })
+      const result = await runReviewedSubmission({
+        adapter, page: active.page, userId, jobUrl: row.job_url,
+        fields: application?.fields || [], runId,
+        onPhase: phase => update(runId, 'SUBMITTING', phase, { application: application || undefined }),
+      })
+      if (!result.ok && ['MANUAL_REQUIRED', 'ANSWER_REQUIRES_USER', 'AMBIGUOUS_FIELD', 'FIELD_NOT_FOUND', 'SUBMISSION_TIMEOUT'].includes(result.code)) {
+        const reason = 'blocker' in result ? result.blocker.message : result.error
+        update(runId, 'PAUSED_NEEDS_INPUT', result.code, { error: reason, application: application || undefined })
+        await this.startAssisted(userId, runId)
         return this.get(userId, runId)
       }
-      
+
       if (!result.ok) {
         const message = 'error' in result && result.error ? result.error : result.code
         const prefixed = message.startsWith(`${result.code}:`) ? message : `${result.code}: ${message}`
@@ -676,7 +462,7 @@ export class AutomationManager {
         event(runId, 'PAUSED_NEEDS_INPUT', prefixed)
         return this.get(userId, runId)
       }
-      
+
       update(runId, 'SUBMITTED', 'APPLICATION_SUBMITTED')
       event(runId, 'SUBMITTED', `${this.boardName(adapter.id)} confirmed that the application was submitted.`)
     } catch (error) {
@@ -688,7 +474,14 @@ export class AutomationManager {
       })
       event(runId, 'PAUSED_NEEDS_INPUT', message)
     } finally {
+      if (stopTrace) await stopTrace().catch(error => console.error('Could not save local submission trace:', error instanceof Error ? error.message : 'Unknown trace error'))
       submissionLocks.delete(runId)
+      const retained = activeRuns.get(runId)
+      if (retained) {
+        activeRuns.delete(runId)
+        await stopRunPreview(runId)
+        await retained.browser.close().catch(() => undefined)
+      }
     }
     return this.get(userId, runId)
   }
@@ -727,7 +520,9 @@ export class AutomationManager {
     update(runId, 'EXTRACTING_JOB', 'LOADING_PUBLIC_FORM')
     event(runId, 'EXTRACTING_JOB', `Loading the ${this.boardName(board)} application schema into JobCopilot.`)
     try {
-      const form = await extractApplicationSchema(board, row.job_url)
+      const form = await extractApplicationSchema(board, row.job_url, row.test_mode ? undefined : worker => {
+        activeRuns.set(runId, { ...worker, processing: false })
+      })
       if (form.manualRequired) {
         const application = emptyApplication(board, 'MANUAL_REQUIRED', form.manualRequired.reason, { displayMode: 'native_form', fields: form.fields, jobId: form.jobId, title: form.job.jobTitle || '', company: form.job.company || form.board, schemaComplete: false })
         const status = form.manualRequired.code === 'CAPTCHA' ? 'PAUSED_CAPTCHA' : form.manualRequired.code === 'LOGIN' ? 'PAUSED_LOGIN' : 'PAUSED_NEEDS_INPUT'
@@ -738,6 +533,7 @@ export class AutomationManager {
           pause: { reason: form.manualRequired.reason, instruction: 'JobCopilot will not open Chrome. Finish this step on the employer site if needed, or retry.' },
         })
         event(runId, status, form.manualRequired.reason)
+        if (activeRuns.has(runId)) await this.startAssisted(userId, runId)
         return
       }
       const application = emptyApplication(board, 'CUSTOM_FORM', `Native ${this.boardName(board)} form. Playwright is not used until you submit.`, {
@@ -772,14 +568,15 @@ export class AutomationManager {
         return
       }
       update(runId, 'FILLING_APPLICATION', 'RESOLVING_QUESTIONS', { job: form.job, questions: form.questions, strategy: 'CUSTOM_FORM', application })
-      event(runId, 'FILLING_APPLICATION', `${application.fields.length} fields found. Generating profile-based suggestions.`)
+      event(runId, 'FILLING_APPLICATION', `${application.fields.length} fields found. Analyzing the resume and drafting answers with Ollama.`)
       const resume = loadResumeForJob(userId, row.job_url)
       for (const field of application.fields) {
         if (manualPauseRequests.has(runId)) return
         if (field.inputType === 'file') {
-          field.status = resume?.resume_storage_name ? 'accepted' : field.required ? 'unresolved' : 'skipped'
-          field.value = resume?.resume_filename || ''
-          field.reason = resume?.resume_storage_name ? 'The saved resume will be attached when you submit.' : field.required ? 'Upload a resume in your profile before submitting.' : 'Optional file skipped.'
+          const hasResume = fileRole(field.text) === 'resume' && Boolean(resume?.resume_storage_name)
+          field.status = hasResume ? 'accepted' : field.required ? 'unresolved' : 'skipped'
+          field.value = hasResume ? resume?.resume_filename || '' : ''
+          field.reason = hasResume ? 'The saved resume will be attached when you submit.' : field.required ? `An attachment is required for ${field.text}.` : 'Optional file skipped.'
           continue
         }
         if (field.inputType === 'education') {
@@ -819,18 +616,18 @@ export class AutomationManager {
         this.pause(runId, { id: unresolved.id, text: unresolved.text, fieldType: unresolved.fieldType, required: true, locator: unresolved.locator || { kind: 'field', value: unresolved.id }, answered: false, inputType: unresolved.inputType }, unresolved.reason || 'Complete this field in the JobCopilot form.', 'CUSTOM_FORM')
         return
       }
-      if (unresolved?.inputType === 'file' && unresolved.required && !resume?.resume_storage_name) {
+      if (unresolved?.inputType === 'file' && unresolved.required) {
         update(runId, 'FILLING_APPLICATION', 'RESOLVING_QUESTIONS', { job: form.job, questions: form.questions, application })
-        this.pause(runId, { id: unresolved.id, text: unresolved.text, fieldType: unresolved.fieldType, required: true, locator: { kind: 'field', value: 'resume' }, answered: false, inputType: 'file' }, 'A saved resume is required for this application.', 'CUSTOM_FORM')
+        this.pause(runId, { id: unresolved.id, text: unresolved.text, fieldType: unresolved.fieldType, required: true, locator: { kind: 'field', value: 'resume' }, answered: false, inputType: 'file' }, unresolved.reason || 'A required attachment is missing.', 'CUSTOM_FORM')
         return
       }
       update(runId, 'READY_FOR_REVIEW', 'AWAITING_FINAL_REVIEW', { job: form.job, questions: form.questions, application })
-      
+
       const unresolvedRequired = application?.fields.filter(f => f.required && !f.value.trim()).length || 0
       const ambiguousCount = application?.fields.filter(f => f.status === 'unresolved').length || 0
-      
+
       event(runId, 'READY_FOR_REVIEW', row.test_mode ? 'Testing complete. Review the in-page form. Submission is disabled.' : row.auto_submit ? 'Form is filled in JobCopilot and passed pre-submission checks.' : 'Form is filled in JobCopilot and ready for your review.')
-      
+
       // Auto-submit guard conditions
       if (row.auto_submit && !row.test_mode) {
         // Verify all guard conditions before auto-submitting
@@ -838,267 +635,34 @@ export class AutomationManager {
           event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked: ${unresolvedRequired} required fields are unresolved`)
           return this.get(userId, runId)
         }
-        
+
         if (ambiguousCount > 0) {
           event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked: ${ambiguousCount} fields are ambiguous`)
           return this.get(userId, runId)
         }
-        
+
         // Pre-submit integrity validation
-        const validation = validateApplicationForRealSubmission(application, false)
+        const validation = validateApplicationForRealSubmission(application, Boolean(row.test_mode))
         if (!validation.isValid) {
           event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked by integrity validation: ${validation.violations.join('; ')}`)
           return this.get(userId, runId)
         }
-        
+
         // Check duplicate submission lock
         if (submissionLocks.has(runId)) {
           event(runId, 'READY_FOR_REVIEW', 'Auto-submit blocked: Submission already in progress')
           return this.get(userId, runId)
         }
-        
-        event(runId, 'READY_FOR_REVIEW', 'Auto-submit mode is enabled. All guard conditions passed. Submitting through a windowless browser now.')
-        queueMicrotask(() => void this.submit(userId, runId))
+
+        event(runId, 'SUBMITTING', 'Auto-submit starting approved application submission.')
+        queueMicrotask(() => {
+          void submitAssistedApplication(userId, runId).catch((error) => {
+            console.error('Auto-submit error:', error)
+          })
+        })
       }
     } catch (error) {
-      if (board === 'greenhouse' && strategy !== 'EMBED') {
-        const identity = parseGreenhouseJobUrl(row.job_url)
-        const embedUrl = identity ? greenhouseEmbedUrl(identity.board, identity.jobId) : null
-        if (embedUrl && isAllowedEmbedUrl(embedUrl)) {
-          const application = emptyApplication('greenhouse', 'EMBED', `The public questions API was unavailable (${error instanceof Error ? error.message : 'unknown error'}). Showing Greenhouse’s official embed. Auto-submit is disabled because the iframe is cross-origin.`, {
-            embedUrl,
-            displayMode: 'official_embed',
-          })
-          update(runId, 'PAUSED_NEEDS_INPUT', 'WAITING_FOR_USER', {
-            strategy: 'EMBED',
-            application,
-            pause: { reason: application.reason, instruction: 'Complete and submit the official Greenhouse form in the Live application panel. JobCopilot will not open Chrome.' },
-          })
-          event(runId, 'PAUSED_NEEDS_INPUT', 'Fell back to the official Greenhouse embed inside JobCopilot.')
-          return
-        }
-      }
       throw error
-    }
-  }
-
-  private async processBrowserRun(runId: string, userId: string, initialRow: RunRow, adapter: JobBoardAdapter) {
-    const strategy = (initialRow.strategy as ApplicationStrategy) || resolveApplicationStrategy(adapter.id, initialRow.job_url).strategy
-    if (!shouldLaunchBrowserForStrategy(strategy)) {
-      throw new Error('Refusing to start Playwright for an in-page application strategy.')
-    }
-    let active = activeRuns.get(runId)
-    if (!active) {
-      update(runId, 'OPENING_JOB', 'LAUNCHING_BROWSER')
-      event(runId, 'OPENING_JOB', 'Opening the application in a windowless browser. This is a browser-assisted flow, not a native React form.')
-      active = await this.ensureBrowser(runId, userId, adapter, true)
-      await adapter.openApplication(active.page, initialRow.job_url)
-    }
-    active.processing = true
-    const stopForManualPause = () => manualPauseRequests.has(runId)
-    if (stopForManualPause()) return
-    const stopForBlocker = async () => {
-      const detected = await adapter.detectBlocker(active!.page)
-      if (!detected) return false
-      this.pauseForBlocker(runId, detected.type === 'CAPTCHA' ? 'PAUSED_CAPTCHA' : 'PAUSED_LOGIN', detected.message)
-      return true
-    }
-    if (await stopForBlocker()) return
-    if (stopForManualPause()) return
-    update(runId, 'EXTRACTING_JOB', 'WAITING_FOR_FORM'); event(runId, 'EXTRACTING_JOB', `Waiting for the ${this.boardName(adapter.id)} application form.`)
-    await adapter.waitForApplication(active.page)
-    if (stopForManualPause()) return
-    const job = await adapter.extractJob(active.page, initialRow.job_url)
-    await this.stabilizeApplicationForm(active.page)
-    let questions = await adapter.extractQuestions(active.page)
-    if (stopForManualPause()) return
-    let application = applicationFromQuestions(adapter.id, strategy, job, questions, 'Browser-assisted application. The image is a live preview of chrome-headless-shell, not the employer DOM.', { displayMode: 'browser_assisted', schemaSource: 'headless_extract', schemaComplete: true, schemaFieldCount: questions.length })
-    logApplicationSchema({
-      ats: this.boardName(adapter.id),
-      source: 'headless DOM extract',
-      sections: 1,
-      fields: questions.length,
-      required: questions.filter((question) => question.required).length,
-      complete: true,
-    })
-    const row = db.prepare('SELECT * FROM automation_runs WHERE id=?').get(runId) as RunRow
-    update(runId, 'FILLING_APPLICATION', 'RESOLVING_QUESTIONS', { job, questions, strategy, application })
-    event(runId, 'FILLING_APPLICATION', `Found ${questions.length} application fields.`, { questionCount: questions.length })
-
-    const resume = loadResumeForJob(userId, row.job_url)
-    const profileEducation = db.prepare('SELECT education_json FROM profiles WHERE user_id=?').get(userId) as { education_json: string } | undefined
-    let resumeProcessed = false
-    for (let questionIndex = 0; questionIndex < questions.length; questionIndex += 1) {
-      if (stopForManualPause()) return
-      const question = questions[questionIndex]!
-      if (question.answered) continue
-      const latest = db.prepare('SELECT application_json FROM automation_runs WHERE id=?').get(runId) as { application_json: string | null }
-      if (latest.application_json) {
-        try { application = JSON.parse(latest.application_json) as ApplicationModel } catch { /* keep */ }
-      }
-      const stored = matchQuestionToField(question, application.fields)
-      if (resumeProcessed && question.inputType === 'file' && question.id === '_systemfield_resume') continue
-      if (await stopForBlocker()) return
-      try { await adapter.focusQuestion(active.page, question) }
-      catch (error) {
-        if (await stopForBlocker()) return
-        throw error
-      }
-      if (stopForManualPause()) return
-      if (await stopForBlocker()) return
-      if (this.isChoiceControl(question) && !question.options?.length && adapter.extractQuestionOptions) {
-        const options = await adapter.extractQuestionOptions(active.page, question)
-        if (options.length) {
-          question.options = options
-          if (stored) stored.options = options
-          update(runId, 'FILLING_APPLICATION', 'RESOLVING_QUESTIONS', { job, questions, application })
-          event(runId, 'FILLING_APPLICATION', `Read ${options.length} choices for “${question.text}”.`, { options })
-        }
-      }
-      if (stopForManualPause()) return
-      event(runId, 'FILLING_APPLICATION', `Inspecting “${question.text}”.`, { fieldType: question.fieldType, inputType: question.inputType, required: question.required })
-      if (stored?.value.trim() && stored.status !== 'unresolved') {
-        try { await adapter.fillAnswer(active.page, question, stored.value) }
-        catch {
-          if (await stopForBlocker()) return
-          return this.pause(runId, question, 'JobCopilot could not complete this control from the in-page answer. Check it in the form.', strategy)
-        }
-        stored.status = stored.status === 'manual' ? 'manual' : 'accepted'
-        update(runId, 'FILLING_APPLICATION', 'RESOLVING_QUESTIONS', { job, questions, application })
-        event(runId, 'FILLING_APPLICATION', `Filled “${question.text}” from the in-page form.`)
-        continue
-      }
-      if (question.inputType === 'file' && question.id === '_systemfield_resume') {
-        const file = resume ? resumeFile(resume) : null
-        if (file) {
-          await adapter.uploadResume(active.page, file)
-          resumeProcessed = true
-          event(runId, 'FILLING_APPLICATION', 'Waiting for résumé parsing to finish before filling the form.')
-          if (adapter.waitForResumeParsing) await adapter.waitForResumeParsing(active.page)
-          else await this.waitForResumeParsing(active.page)
-          if (stopForManualPause()) return
-          await this.waitForFormStability(active.page)
-          if (await stopForBlocker()) return
-          event(runId, 'FILLING_APPLICATION', resume?.tailored ? 'Attached the approved job-specific resume.' : 'Attached the saved resume.', { filename: resume?.resume_filename })
-          questions = await adapter.extractQuestions(active.page)
-          application.fields = reconcileCanonicalFields(application.fields, questionsToFields(questions))
-          update(runId, 'FILLING_APPLICATION', 'RESOLVING_REMAINING_QUESTIONS', { job, questions, application })
-          event(runId, 'FILLING_APPLICATION', 'Résumé parsing finished. Refreshed the form and will fill only the remaining empty fields.', { remainingCount: questions.filter((item) => !item.answered && item.id !== '_systemfield_resume').length })
-          questionIndex = -1
-          continue
-        }
-        if (question.required) return this.pause(runId, question, 'A saved resume is required for this application.', strategy)
-        continue
-      }
-      if (question.inputType === 'file') {
-        const isCoverLetter = /cover.?letter/i.test(`${question.id} ${question.text}`)
-        if (!question.required) {
-          event(runId, 'FILLING_APPLICATION', `Skipped optional file field “${question.text}”.`, { fieldId: question.id })
-          continue
-        }
-        const file = resume ? resumeFile(resume) : null
-        if (isCoverLetter && file) {
-          await adapter.uploadFile(active.page, question, file)
-          await active.page.waitForTimeout(700)
-          if (await stopForBlocker()) return
-          event(runId, 'FILLING_APPLICATION', 'Attached the saved resume to the required cover-letter upload.', { filename: resume?.resume_filename })
-          continue
-        }
-        return this.pause(runId, question, isCoverLetter ? 'A saved resume is required for this mandatory cover-letter upload.' : `“${question.text}” requires a file.`, strategy)
-      }
-      if (question.locator.kind === 'education') {
-        try {
-          const education = JSON.parse(profileEducation?.education_json || '[]') as EducationRecord[]
-          await adapter.fillEducation(active.page, education)
-          if (await stopForBlocker()) return
-          event(runId, 'FILLING_APPLICATION', 'Filled education history from your profile.', { count: education.length })
-        } catch (error) {
-          return this.pause(runId, question, error instanceof Error ? error.message : 'Complete the education section in the live form.', strategy)
-        }
-        continue
-      }
-      const resolution = await answerResolver.resolve(userId, question, job, { testMode: Boolean(row.test_mode) })
-      if (stopForManualPause()) return
-      if (resolution.status === 'RESOLVED') {
-        try { await adapter.fillAnswer(active.page, question, resolution.answer) }
-        catch {
-          if (await stopForBlocker()) return
-          return this.pause(runId, question, 'JobCopilot could not complete this control reliably. Check or complete it in the live form.', strategy)
-        }
-        if (stored) {
-          stored.value = String(resolution.answer)
-          stored.suggestion = stored.value
-          stored.source = resolution.source
-          stored.confidence = resolution.confidence
-          stored.status = 'suggested'
-          stored.reason = resolution.explanation
-        }
-        if (stopForManualPause()) return
-        if (await stopForBlocker()) return
-        update(runId, 'FILLING_APPLICATION', 'RESOLVING_QUESTIONS', { job, questions, application })
-        event(runId, 'FILLING_APPLICATION', `Filled “${question.text}” from ${resolution.source}.`, { source: resolution.source, confidence: resolution.confidence, requiresReview: resolution.requiresReview })
-        if (this.isChoiceControl(question)) {
-          const refreshed = await adapter.extractQuestions(active.page)
-          const knownIds = new Set(questions.map((item) => item.id))
-          const revealed = refreshed.filter((item) => !knownIds.has(item.id))
-          if (revealed.length) {
-            questions = refreshed
-            application.fields = reconcileCanonicalFields(application.fields, questionsToFields(questions))
-            update(runId, 'FILLING_APPLICATION', 'RESOLVING_REVEALED_QUESTIONS', { job, questions, application })
-            event(runId, 'FILLING_APPLICATION', `Found ${revealed.length} additional field${revealed.length === 1 ? '' : 's'} revealed by “${question.text}”.`, { fields: revealed.map((item) => item.text) })
-            questionIndex = -1
-          }
-        }
-        continue
-      }
-      if (stored) {
-        stored.status = question.required ? 'unresolved' : 'skipped'
-        stored.reason = resolution.reason
-        update(runId, 'FILLING_APPLICATION', 'RESOLVING_QUESTIONS', { job, questions, application })
-      }
-      if (question.required) return this.pause(runId, question, resolution.reason, strategy)
-      event(runId, 'FILLING_APPLICATION', `Skipped optional field “${question.text}”.`, { reason: resolution.reason })
-    }
-    if (stopForManualPause()) return
-    if (await stopForBlocker()) return
-    if (!await adapter.isReviewReady(active.page)) throw new Error('The application form did not reach the review boundary.')
-    questions = await adapter.extractQuestions(active.page)
-    application.fields = reconcileCanonicalFields(application.fields, questionsToFields(questions))
-    update(runId, 'READY_FOR_REVIEW', 'AWAITING_FINAL_REVIEW', { job, questions, application, strategy })
-    
-    const unresolvedRequired = application?.fields.filter(f => f.required && !f.value.trim()).length || 0
-    const ambiguousCount = application?.fields.filter(f => f.status === 'unresolved').length || 0
-    
-    event(runId, 'READY_FOR_REVIEW', row.test_mode ? 'Testing complete. The form was filled for inspection and submission is disabled.' : row.auto_submit ? 'Application is filled and passed the pre-submit checks.' : 'Application is filled and ready for your review and submission approval.')
-    
-    // Auto-submit guard conditions
-    if (row.auto_submit && canProgrammaticallySubmit(strategy) && !row.test_mode) {
-      // Verify all guard conditions before auto-submitting
-      if (unresolvedRequired > 0) {
-        event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked: ${unresolvedRequired} required fields are unresolved`)
-        return
-      }
-      
-      if (ambiguousCount > 0) {
-        event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked: ${ambiguousCount} fields are ambiguous`)
-        return
-      }
-      
-      // Pre-submit integrity validation
-      const validation = validateApplicationForRealSubmission(application, false)
-      if (!validation.isValid) {
-        event(runId, 'READY_FOR_REVIEW', `Auto-submit blocked by integrity validation: ${validation.violations.join('; ')}`)
-        return
-      }
-      
-      // Check duplicate submission lock
-      if (submissionLocks.has(runId)) {
-        event(runId, 'READY_FOR_REVIEW', 'Auto-submit blocked: Submission already in progress')
-        return
-      }
-      
-      event(runId, 'READY_FOR_REVIEW', 'Auto-submit mode is enabled. All guard conditions passed. Submitting the completed application now.')
-      queueMicrotask(() => void this.submit(userId, runId))
     }
   }
 
@@ -1106,7 +670,7 @@ export class AutomationManager {
     const existing = activeRuns.get(runId)
     if (existing?.browser.isConnected() && !existing.page.isClosed()) return existing
     const { browser, context } = await launchHeadlessAutomationBrowser()
-    event(runId, 'OPENING_JOB', `Started an isolated windowless headless-shell session for this run (${adapter.id}). Google Chrome is not launched.`)
+    event(runId, 'OPENING_JOB', `Started an isolated headless Chrome session for this run (${adapter.id}). Your personal Chrome profile is not used.`)
     browser.on('disconnected', () => {
       const active = activeRuns.get(runId)
       if (!active || active.browser !== browser) return
@@ -1142,44 +706,8 @@ export class AutomationManager {
     update(runId, status, currentStep, { pause }); event(runId, status, message)
   }
 
-  private async waitForResumeParsing(page: Page) {
-    const busy = page.getByText(/analyzing (?:your )?resume|parsing (?:your )?resume|processing (?:your )?resume|uploading (?:your )?resume/i)
-    const deadline = Date.now() + 30_000
-    while (Date.now() < deadline) {
-      let visible = false
-      for (let index = 0; index < await busy.count(); index += 1) {
-        if (await busy.nth(index).isVisible().catch(() => false)) { visible = true; break }
-      }
-      if (!visible) break
-      await page.waitForTimeout(500)
-    }
-    if (Date.now() >= deadline) throw new Error('Résumé parsing did not finish within 30 seconds. The application was not submitted.')
-  }
-
-  private async stabilizeApplicationForm(page: Page) {
-    await page.waitForLoadState('domcontentloaded').catch(() => undefined)
-    await page.evaluate(`(() => { var form = document.querySelector('form'); if (form) form.scrollTo(0, form.scrollHeight); window.scrollTo(0, document.body.scrollHeight); })()`).catch(() => undefined)
-    await this.waitForFormStability(page)
-    await page.evaluate(`(() => { window.scrollTo(0, 0); })()`).catch(() => undefined)
-  }
-
-  private async waitForFormStability(page: Page) {
-    await page.waitForTimeout(1_200)
-    const fields = page.locator('form input:not([type="hidden"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]), form textarea, form select')
-    let previous = ''; let stableSamples = 0
-    const stabilizationDeadline = Date.now() + 15_000
-    while (Date.now() < stabilizationDeadline && stableSamples < 3) {
-      const snapshot = JSON.stringify(await fields.evaluateAll('controls => controls.map(control => control.value)'))
-      stableSamples = snapshot === previous ? stableSamples + 1 : 0
-      previous = snapshot
-      await page.waitForTimeout(500)
-    }
-  }
-
   private boardName(id: string) { return id.charAt(0).toUpperCase() + id.slice(1) }
-  private isChoiceControl(question: AdapterQuestion) {
-    return question.fieldType === 'select' || question.fieldType === 'boolean' || ['select', 'radio', 'checkbox', 'checkbox-group', 'radio-group', 'boolean'].includes(question.inputType || '')
-  }
+
 }
 
 

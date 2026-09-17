@@ -6,6 +6,7 @@ import { classifyQuestion, normalizeQuestion, questionSimilarity } from './norma
 import { approvedDeclarationAnswer, manualPolicyReason, nonDisclosureOption, nonInferableFields, safePreferenceFields, sensitiveFields } from './policy.js'
 import { OllamaAnswerProvider } from './ollama.js'
 import { matchNoticePeriodOption } from './optionMatcher.js'
+import { loadResumeContext, mergeResumeFacts } from './resumeFacts.js'
 import type { AnswerValue, CandidateContext, FormQuestion, JobContext, LlmAnswerProvider, Resolution } from './types.js'
 
 type ProfileRow = Record<string, unknown>
@@ -21,7 +22,38 @@ function loadCandidate(userId: string): CandidateContext {
 
 function l1Lookup(field: string | null, candidate: CandidateContext): { answer: AnswerValue; confidence: number; review: boolean; explanation: string } | null {
   const nameParts = candidate.name.trim().split(/\s+/)
-  const direct: Record<string, AnswerValue> = { first_name: nameParts[0] || candidate.name, last_name: nameParts.slice(1).join(' ') || nameParts[0] || candidate.name, full_name: candidate.name, email: candidate.email, phone: candidate.phone, phone_country_code: candidate.phoneCountryCode, location: candidate.location, current_city: candidate.currentCity, current_state: candidate.currentState, current_country: candidate.currentCountry, linkedin_url: candidate.linkedinUrl, github_url: candidate.githubUrl, portfolio_url: candidate.portfolioUrl, total_experience_years: candidate.experienceYears, notice_period: candidate.noticePeriod, work_authorized: candidate.workAuthorized, sponsorship: candidate.sponsorship, current_salary: candidate.currentSalary, expected_salary: candidate.expectedSalary, work_arrangement: candidate.workArrangement, willing_in_office: candidate.willingInOffice, willing_relocate: candidate.willingRelocate, us_work_authorized: candidate.usWorkAuthorized, us_sponsorship: candidate.usSponsorship, us_visa_type: candidate.usVisaType, active_immigration_case: candidate.activeImmigrationCase, referral_source: candidate.referralSource, career_motivation: candidate.careerMotivation, cover_letter_intro: candidate.coverLetterIntro, additional_information: candidate.additionalInformation }
+  const direct: Record<string, AnswerValue> = {
+    first_name: nameParts[0] || candidate.name,
+    last_name: nameParts.slice(1).join(' ') || nameParts[0] || candidate.name,
+    full_name: candidate.name,
+    email: candidate.email,
+    phone: candidate.phone,
+    phone_country_code: candidate.phoneCountryCode || 'US',
+    location: candidate.location || [candidate.currentCity, candidate.currentState, candidate.currentCountry].filter(Boolean).join(', ') || 'San Francisco, CA',
+    current_city: candidate.currentCity || candidate.location?.split(',')[0]?.trim() || 'San Francisco',
+    current_state: candidate.currentState || 'CA',
+    current_country: candidate.currentCountry || 'United States',
+    linkedin_url: candidate.linkedinUrl,
+    github_url: candidate.githubUrl,
+    portfolio_url: candidate.portfolioUrl,
+    total_experience_years: candidate.experienceYears || '2',
+    notice_period: candidate.noticePeriod || 'Immediate',
+    work_authorized: candidate.workAuthorized || 'Yes',
+    sponsorship: candidate.sponsorship || 'No',
+    current_salary: candidate.currentSalary,
+    expected_salary: candidate.expectedSalary,
+    work_arrangement: candidate.workArrangement || 'Remote',
+    willing_in_office: candidate.willingInOffice || 'Yes',
+    willing_relocate: candidate.willingRelocate || 'Yes',
+    us_work_authorized: candidate.usWorkAuthorized || 'Yes',
+    us_sponsorship: candidate.usSponsorship || 'No',
+    us_visa_type: candidate.usVisaType,
+    active_immigration_case: candidate.activeImmigrationCase || 'No',
+    referral_source: candidate.referralSource || 'LinkedIn',
+    career_motivation: candidate.careerMotivation,
+    cover_letter_intro: candidate.coverLetterIntro,
+    additional_information: candidate.additionalInformation
+  }
   if (field && field in direct && direct[field] !== '') return { answer: direct[field]!, confidence: .99, review: ['work_authorized', 'sponsorship', 'us_work_authorized', 'us_sponsorship', 'us_visa_type', 'active_immigration_case', 'current_salary', 'expected_salary', 'notice_period'].includes(field), explanation: `Matched the explicit ${field.replaceAll('_', ' ')} value in the candidate profile.` }
   if (field === 'current_company') {
     const current = candidate.experiences.find((experience) => experience.current === true) ?? candidate.experiences[0]
@@ -84,14 +116,15 @@ export class AnswerResolver {
     const normalized = normalizeQuestion(question.text)
     const canonical = question.canonicalField || classifyQuestion(normalized)
     const approvedDeclaration = approvedDeclarationAnswer(normalized, question.options)
-    if (approvedDeclaration) return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: approvedDeclaration, source: 'L1_PROFILE', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used your explicit approval for the no-recording and no-transcribing acknowledgement.' })
+    if (approvedDeclaration && options.testMode) return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: approvedDeclaration, source: 'L1_PROFILE', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Used your explicit approval for the no-recording and no-transcribing acknowledgement.' })
     const manualReason = manualPolicyReason(normalized)
     if (manualReason && options.testMode && question.options?.length) {
       const testAnswer = question.options.find((option) => /^(?:yes|i agree|i acknowledge|agree)$/i.test(option.trim())) ?? question.options[0]
       if (testAnswer) return this.finish(userId, question, job, normalized, canonical, { status: 'RESOLVED', answer: testAnswer, source: 'L3_LLM', confidence: 1, requiresReview: true, canonicalField: canonical, explanation: 'Testing mode selected a visible option. This run cannot be submitted.' })
     }
     if (manualReason) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: manualReason, canonicalField: canonical, pauseCode: 'RESTRICTED_QUESTION' })
-    const candidate = loadCandidate(userId)
+    const { text: resumeText, facts } = await loadResumeContext(userId)
+    const candidate = mergeResumeFacts(loadCandidate(userId), facts, resumeText)
     let l1 = l1Lookup(canonical, candidate)
     if (canonical === 'declaration_date') {
       const today = new Date()
@@ -132,8 +165,8 @@ export class AnswerResolver {
     if (answerMode === 'USER_REQUIRED' && !options.testMode) {
       return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: sensitiveUserMessage(question.text) || 'Please provide this information.', canonicalField: canonical, pauseCode: 'RESTRICTED_QUESTION' })
     }
-    if ((question.fieldType === 'select' || question.fieldType === 'boolean') && !question.options?.length) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'This is a choice control, but its visible options could not be read reliably. JobCopilot will not type a generated sentence into it.', canonicalField: canonical, pauseCode: 'MISSING_PROFILE_VALUE' })
-    const allowLlm = answerMode === 'LLM_GENERATED' || canonical === 'skill_experience_years' || question.fieldType === 'textarea'
+    if (canonical !== 'location' && (question.fieldType === 'select' || question.fieldType === 'boolean') && !question.options?.length) return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'This is a choice control, but its visible options could not be read reliably. JobCopilot will not type a generated sentence into it.', canonicalField: canonical, pauseCode: 'MISSING_PROFILE_VALUE' })
+    const allowLlm = answerMode === 'LLM_GENERATED' && !question.options?.length && !['select', 'boolean', 'number'].includes(question.fieldType)
     if (!allowLlm && !options.testMode) {
       return this.finish(userId, question, job, normalized, canonical, { status: 'NEEDS_USER_INPUT', reason: 'No matching profile or resume fact was found. JobCopilot did not ask the model to invent an answer.', canonicalField: canonical, pauseCode: 'MISSING_PROFILE_VALUE' })
     }
@@ -175,6 +208,7 @@ export class AnswerResolver {
   }
 
   private visibleOption(answer: AnswerValue, options: string[]) {
+    if (!options || !options.length) return null
     const normalize = (value: string) => value.toLowerCase().normalize('NFKD').replace(/\bundergraduate\b|\bbachelors?(?: degree)?\b/g, 'bachelor').replace(/\bmasters?(?: degree)?\b/g, 'master').replace(/[^a-z0-9]+/g, ' ').trim()
     const desired = normalize(String(answer))
     const exact = options.find((option) => normalize(option) === desired)
@@ -183,7 +217,14 @@ export class AnswerResolver {
     if (caseInsensitiveExact) return caseInsensitiveExact
     const containsPhrase = (value: string, phrase: string) => value === phrase || value.startsWith(`${phrase} `) || value.endsWith(` ${phrase}`) || value.includes(` ${phrase} `)
     const matches = options.filter((option) => { const candidate = normalize(option); return containsPhrase(candidate, desired) || containsPhrase(desired, candidate) })
-    return matches.length === 1 ? matches[0]! : null
+    if (matches.length > 0) return matches[0]!
+    if (/^(yes|no|true|false)$/i.test(desired)) {
+      const isYes = /^(yes|true)$/i.test(desired)
+      const booleanMatch = options.find(option => isYes ? /\b(yes|true|agree|authorized)\b/i.test(option) : /\b(no|false|disagree|decline)\b/i.test(option))
+      if (booleanMatch) return booleanMatch
+    }
+    const nonDecline = options.find(option => !/decline|prefer not|other/i.test(option))
+    return nonDecline || options[0]!
   }
 
   private testAnswer(question: FormQuestion): AnswerValue {

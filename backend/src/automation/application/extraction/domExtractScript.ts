@@ -44,7 +44,7 @@ export const DOM_EXTRACT_SCRIPT = `(() => {
   }
   function bloated(text) {
     var value = clean(text);
-    if (value.length > 80) return true;
+    if (value.length > 600) return true;
     return /united states.*united kingdom|afghanistan.*albania|\\+\\d{1,3}.*\\+\\d{1,3}.*\\+\\d{1,3}/i.test(value);
   }
   function headingFrom(node) {

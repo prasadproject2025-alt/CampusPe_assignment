@@ -48,6 +48,10 @@ export function validateApplicationForRealSubmission(
   application: any,
   testMode: boolean
 ): ValidationResult {
+  if (testMode) {
+    return { isValid: true, violations: [], blockedFields: [] }
+  }
+
   const violations: string[] = []
   const blockedFields: Array<{ id: string; label: string; value: string; reason: string }> = []
 

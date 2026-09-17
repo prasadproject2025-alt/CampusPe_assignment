@@ -36,7 +36,7 @@ const nativeHttp = (board: string, extra: Partial<BoardCapability>): BoardCapabi
   submitMode: 'server_browser',
   embedReason: `${board} hosted apply pages are not iframed by JobCopilot.`,
   customFormReason: `${board} application questions are loaded into a native React form. Playwright is not used until submit.`,
-  browserReason: 'Server-side chrome-headless-shell is used only to submit reviewed answers. No Chrome window is shown.',
+  browserReason: 'Installed Google Chrome runs headlessly on the server and is used only to submit reviewed answers. No Chrome window is shown.',
   ...extra,
 })
 
@@ -51,7 +51,7 @@ const nativeHeadlessExtract = (board: string, extra: Partial<BoardCapability> = 
   submitMode: 'server_browser',
   embedReason: `${board} does not publish an official in-page application embed that JobCopilot can legally iframe.`,
   customFormReason: `${board} does not expose a candidate-facing application-form API. Schema is extracted with a disposable backend browser, then closed. The UI is a React form, not a browser preview.`,
-  browserReason: 'A disposable chrome-headless-shell worker extracts fields and later submits. Google Chrome is never launched.',
+  browserReason: 'An isolated headless Chrome worker extracts fields and later submits. Your personal Chrome profile is never used.',
   ...extra,
 })
 

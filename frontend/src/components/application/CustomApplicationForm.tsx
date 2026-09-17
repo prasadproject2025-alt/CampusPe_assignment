@@ -1,5 +1,6 @@
+import { PhoneCountryField } from '../../ProfilePage'
 import { Sparkles } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ApplicationQuestion } from './ApplicationQuestion'
 import type { ApplicationField, AutomationRun } from './types'
 
@@ -23,10 +24,13 @@ function renderControl(
   locked: boolean,
   onChange: (value: string) => void,
 ) {
-  if (field.inputType === 'file') {
-    return <input value={field.value || 'Resume from your profile'} disabled />
+  if (field.inputType === 'country-code' || /^phone country code$/i.test(field.text)) {
+    return <PhoneCountryField value={field.value} onChange={onChange} disabled={locked} />
   }
-  if (MULTI_SELECT_TYPES.has(field.inputType || '') || field.isMany) {
+  if (field.inputType === 'file') {
+    return <input aria-label={field.text} value={field.value || 'No attachment selected'} disabled />
+  }
+  if ((MULTI_SELECT_TYPES.has(field.inputType || '') || field.isMany) && field.options?.length) {
     const selected = new Set(splitValues(field.value))
     return (
       <div className="option-list" role="group" aria-label={field.text}>
@@ -50,11 +54,11 @@ function renderControl(
     )
   }
   if (field.fieldType === 'textarea') {
-    return <textarea rows={4} value={field.value} disabled={locked} onChange={(event) => onChange(event.target.value)} />
+    return <textarea aria-label={field.text} rows={4} value={field.value} disabled={locked} onChange={(event) => onChange(event.target.value)} />
   }
-  if (field.fieldType === 'boolean' || field.fieldType === 'select' || field.inputType === 'radio-group') {
+  if (field.fieldType === 'boolean' || ((field.fieldType === 'select' || field.inputType === 'radio-group' || field.inputType === 'radio') && field.options?.length)) {
     return (
-      <select value={field.value} disabled={locked} onChange={(event) => onChange(event.target.value)}>
+      <select aria-label={field.text} value={field.value} disabled={locked} onChange={(event) => onChange(event.target.value)}>
         <option value="">Select…</option>
         {(field.options?.length ? field.options : ['Yes', 'No']).map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
@@ -63,7 +67,7 @@ function renderControl(
   const htmlType = field.inputType === 'email' || field.inputType === 'tel' || field.inputType === 'url' || field.inputType === 'date' || field.fieldType === 'number'
     ? (field.fieldType === 'number' ? 'number' : field.inputType)
     : 'text'
-  return <input type={htmlType} value={field.value} placeholder={field.placeholder} disabled={locked} onChange={(event) => onChange(event.target.value)} />
+  return <input aria-label={field.text} type={htmlType} value={field.value} placeholder={field.placeholder} disabled={locked} onChange={(event) => onChange(event.target.value)} />
 }
 
 export function CustomApplicationForm({
@@ -77,18 +81,20 @@ export function CustomApplicationForm({
 }) {
   const incoming = run.application?.fields || []
   const [fields, setFields] = useState(incoming)
+  const edits = useRef(new Map<string, string>())
   const pausedId = run.pause?.question?.id
   const schemaKey = incoming.map((field) => field.id).join('|')
 
   useEffect(() => {
-    setFields(run.application?.fields || [])
+    setFields((run.application?.fields || []).map(field => edits.current.has(field.id) ? { ...field, value: edits.current.get(field.id)!, status: edits.current.get(field.id)!.trim() ? 'manual' : 'empty' } : field))
   }, [run.id, run.status, run.updatedAt, schemaKey])
 
   const answers = useMemo(() => Object.fromEntries(fields.map((field) => [field.id, field.value])), [fields])
   const visible = fields.filter((field) => fieldVisible(field, answers))
 
   const updateField = (id: string, value: string, status?: ApplicationField['status']) => {
-    setFields((current) => current.map((field) => field.id === id ? { ...field, value, status: status || (value.trim() ? 'manual' : 'empty') } : field))
+    edits.current.set(id, value)
+    setFields((current) => current.map((field) => field.id === id ? { ...field, value, reason: value.trim() ? 'Edited in the JobCopilot form.' : field.reason, status: status || (value.trim() ? 'manual' : 'empty') } : field))
     onUpdateAnswers([{ id, value }])
   }
 

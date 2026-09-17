@@ -3,14 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "concurrently -k -n API,WEB -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "build": "npm run build:frontend && npm run build:backend",
-    "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && npm run build",
-    "test": "cd backend && npm run test",
-    "start": "cd backend && npm run start"
+    "dev": "node scripts/ensure-ollama.mjs && concurrently -k -n API,WEB -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:ollama": "ollama serve",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build": "npm --prefix frontend run build && npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "test": "npm --prefix backend run test",
+    "start": "npm --prefix backend run start"
   },
   "devDependencies": {
     "concurrently": "latest"

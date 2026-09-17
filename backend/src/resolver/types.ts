@@ -51,6 +51,8 @@ export type CandidateContext = {
   education: Array<Record<string, unknown>>
   demographics: Record<string, string>
   allowDemographicSuggestions: boolean
+  resumeText?: string
+  skills?: string[]
 }
 
 export type ResolvedAnswer = {

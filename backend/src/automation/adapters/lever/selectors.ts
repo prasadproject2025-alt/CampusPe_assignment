@@ -11,7 +11,12 @@ export const leverSelectors = {
   resumeFailure: '.resume-upload-failure, .resume-upload-oversize',
   resumeFilename: '.visible-resume-upload .filename',
   resumeStorageId: 'input[name="resumeStorageId"]',
+  locationInput: '#location-input, input[data-qa="location-input"], input.location-input, input[name="location"]',
+  selectedLocation: '#selected-location',
   locationResults: '.dropdown-results',
+  locationSuggestions: '.dropdown-results .dropdown-location, .dropdown-results > *',
+  hcaptchaResponse: '#hcaptchaResponseInput, input[name="h-captcha-response"]',
+  hcaptchaSubmit: '#hcaptchaSubmitBtn',
   captchaChallenge: [
     'iframe[src*="hcaptcha.com"]',
     'iframe[src*="captcha"]',

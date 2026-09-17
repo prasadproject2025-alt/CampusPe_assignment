@@ -4,6 +4,7 @@ import type { AdapterQuestion, Blocker, EducationRecord, ResumeUpload } from '..
 import { extractQuestionsFromPage } from '../../application/extraction/domExtractor.js'
 import { fillLiveAnswer, resolveLiveControl } from '../../application/extraction/liveResolver.js'
 import { ashbySelectors } from './selectors.js'
+import { bezierMouseMove, humanPause, naturalScroll, preSubmitReview, randomInt } from '../../application/stealthHelpers.js'
 
 export function ashbyChoiceMatches(label: string, desired: string) {
   if (label === desired) return true
@@ -21,7 +22,7 @@ export function ashbyChoiceAnswerParts(answer: AnswerValue, inputType?: string) 
 }
 
 export class AshbyApplicationPage {
-  constructor(private readonly page: Page) {}
+  constructor(private readonly page: Page) { }
 
   async waitUntilReady() {
     await this.page.waitForLoadState('domcontentloaded')
@@ -35,13 +36,13 @@ export class AshbyApplicationPage {
   async focus(question: AdapterQuestion) {
     const target = await resolveLiveControl(this.page, question)
     await target.scrollIntoViewIfNeeded()
-    await this.pause(700, 1_300)
+    await this.pause(900, 1_800)
   }
 
   async fill(question: AdapterQuestion, answer: AnswerValue) {
     if (question.locator.kind === 'education') throw new Error('Education requires structured handling.')
     await fillLiveAnswer(this.page, question, answer)
-    await this.pause(750, 1_350)
+    await this.pause(900, 2_000)
   }
 
   async fillEducation(records: EducationRecord[]) {
@@ -56,7 +57,7 @@ export class AshbyApplicationPage {
       const entry = this.page.locator('.ashby-application-form-input-education-entry').nth(index)
       await entry.scrollIntoViewIfNeeded(); await this.pause(700, 1_200)
       const school = entry.locator(ashbySelectors.schoolSearch)
-      await school.hover(); await this.pause(450, 800); await school.click(); await school.fill(''); await school.pressSequentially(record.school, { delay: this.random(75, 120), timeout: 90_000 }); await this.pause(850, 1_350)
+      await school.hover(); await this.pause(450, 800); await school.click(); await school.fill(''); await school.pressSequentially(record.school, { delay: this.random(85, 140), timeout: 90_000 }); await this.pause(1_000, 1_800)
       const exactSchool = this.page.getByRole('option').filter({ hasText: record.school }).first()
       const firstSchool = this.page.getByRole('option').first()
       const schoolOption = await exactSchool.count() ? exactSchool : firstSchool
@@ -101,8 +102,51 @@ export class AshbyApplicationPage {
 
   async submit() {
     const button = this.page.getByRole('button', { name: /submit application/i })
-    if (!await button.isVisible()) throw new Error('The Ashby submit button is not available.')
-    await button.scrollIntoViewIfNeeded(); await this.pause(700, 1_200); await button.hover(); await this.pause(550, 950); await button.click()
+    if (!await button.isVisible().catch(() => false)) throw new Error('The Ashby submit button is not available.')
+    if (!await button.isEnabled({ timeout: 5000 }).catch(() => false)) {
+      throw new Error('The Submit button is currently disabled on the employer form. Complete all required fields on the form first.')
+    }
+
+    // --- Pre-submit review: simulate user reading through the form ----------
+    await preSubmitReview(this.page)
+
+    // --- Scroll to submit button naturally -----------------------------------
+    await button.scrollIntoViewIfNeeded()
+    await humanPause(this.page, 500, 1000)
+
+    // Gentle natural scroll to ensure the button is well in view
+    await naturalScroll(this.page, randomInt(50, 150), { scrollSteps: randomInt(2, 4) })
+    await humanPause(this.page, 600, 1200)
+
+    // --- Bézier curve mouse approach to the button --------------------------
+    const box = await button.boundingBox().catch(() => null)
+    if (box) {
+      const vp = this.page.viewportSize() ?? { width: 1280, height: 800 }
+      const targetX = Math.max(20, Math.min(vp.width - 20, box.x + box.width / 2 + (Math.random() * 6 - 3)))
+      const targetY = Math.max(20, Math.min(vp.height - 20, box.y + box.height / 2 + (Math.random() * 4 - 2)))
+
+      // Pick a starting point bounded safely inside the visible viewport
+      const startX = Math.max(20, Math.min(vp.width - 20, targetX - randomInt(60, 180)))
+      const startY = Math.max(20, Math.min(vp.height - 20, targetY - randomInt(40, 140)))
+
+      // Move mouse into position via Bézier curve
+      await bezierMouseMove(this.page, targetX, targetY, {
+        fromX: startX,
+        fromY: startY,
+        steps: randomInt(20, 35),
+      })
+      await humanPause(this.page, 300, 700)
+    }
+
+    // --- Hover and pause (simulate reading the button label) ----------------
+    await button.hover().catch(() => undefined)
+    await humanPause(this.page, 400, 900)
+
+    // --- Click with natural timing ------------------------------------------
+    await button.click({ timeout: 10_000 }).catch(async () => {
+      await humanPause(this.page, 200, 500)
+      await button.click({ force: true })
+    })
   }
 
   private random(minimum: number, maximum: number) { return Math.floor(Math.random() * (maximum - minimum + 1)) + minimum }
@@ -112,6 +156,6 @@ export class AshbyApplicationPage {
     return { year: match?.[1] ?? '', month: match?.[2] ? String(Number(match[2])) : '' }
   }
   private async typeNaturally(input: ReturnType<Page['locator']>, value: string) {
-    await input.hover(); await this.pause(400, 750); await input.click(); await this.pause(300, 600); await input.fill(''); await input.pressSequentially(value, { delay: this.random(75, 120), timeout: 90_000 }); await this.pause(700, 1_200)
+    await input.hover(); await this.pause(400, 750); await input.click(); await this.pause(300, 600); await input.fill(''); await input.pressSequentially(value, { delay: this.random(85, 140), timeout: 90_000 }); await this.pause(800, 1_500)
   }
 }

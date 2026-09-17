@@ -15,8 +15,7 @@
     "trace:greenhouse-payload": "tsx src/scripts/trace-greenhouse-payload.ts",
     "diagnostic:greenhouse-presubmit": "tsx src/scripts/diagnostic-greenhouse-presubmit.ts",
     "test:real-greenhouse-submission": "tsx src/scripts/test-real-greenhouse-submission.ts",
-    "test:real-lever-submission": "node --import tsx scripts/test-real-lever-submission.ts",
-    "postinstall": "playwright install chromium chromium-headless-shell"
+    "test:real-lever-submission": "node --import tsx scripts/test-real-lever-submission.ts"
   },
   "dependencies": {
     "country-state-city": "^3.2.1",
@@ -26,15 +25,17 @@
     "helmet": "latest",
     "mammoth": "^1.12.2",
     "multer": "latest",
+    "nodemailer": "^10.0.10",
     "pdf-parse": "^2.4.5",
-    "playwright-core": "latest",
     "playwright": "latest",
+    "playwright-core": "latest",
     "zod": "latest"
   },
   "devDependencies": {
     "@types/express": "latest",
     "@types/multer": "latest",
     "@types/node": "latest",
+    "@types/nodemailer": "^8.0.2",
     "tsx": "latest",
     "typescript": "latest"
   }
