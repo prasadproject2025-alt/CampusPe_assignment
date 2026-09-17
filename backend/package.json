@@ -25,7 +25,6 @@
     "helmet": "latest",
     "mammoth": "^1.12.2",
     "multer": "latest",
-    "nodemailer": "^10.0.10",
     "pdf-parse": "^2.4.5",
     "playwright": "latest",
     "playwright-core": "latest",
@@ -35,7 +34,6 @@
     "@types/express": "latest",
     "@types/multer": "latest",
     "@types/node": "latest",
-    "@types/nodemailer": "^8.0.2",
     "tsx": "latest",
     "typescript": "latest"
   }
